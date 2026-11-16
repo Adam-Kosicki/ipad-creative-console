@@ -18,3 +18,9 @@ iPad 4 maxes out at iOS 10.3.3. Macro Deck's native app needs iOS 15, so use the
 ## Troubleshooting
 - Can't connect: same Wi-Fi? firewall? correct port?
 - Sluggish: Rendering = Simple, lower icon resolution, close other Safari tabs.
+
+## What was tested in the cloud (Linux, no iPad)
+- Built the Macro Deck host from source with .NET 10 and ran it; it listens on HTTP port **7193** by default (HTTPS 7194). Check Settings > Network on your PC in case yours differs.
+- Built the web client (`ui/runtime` then `ui/web-client`, `npm run build`) and the repo's own `es-check es5` passed: the bundle is ES5, which is what iOS 10 Safari needs.
+- Served the client from the host (`ASPNETCORE_WEBROOT=ui/web-client/dist`) and loaded it in Chromium with no JS errors. It showed "Finish the first-time setup in the Macro Deck desktop app, then reload": that first-time setup needs the desktop app on your PC.
+- **Not tested:** real iPad 4 / iOS 10 Safari, pairing, and actual button performance.
