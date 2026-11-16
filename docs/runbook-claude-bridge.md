@@ -15,5 +15,6 @@ The bridge also polls `/api/state` every 2 s with `X-PhoneBox-App`: the agent on
 
 ## Notes / risks
 - Access is guarded only by the token in the URL, over plain HTTP on your LAN. Anyone on the network with the URL can approve Claude actions. Keep the token secret; use a trusted network.
-- Not yet verified: agent behaviour with a non-browser client against `BrowserGuard`, and the exact quota JSON on a live agent.
+- Verified by reading PhoneBox source (not by running it): the agent requires Host `127.0.0.1`/`localhost` (the bridge connects to that), and `BrowserGuard` only rejects requests carrying `Sec-Fetch-Site: cross-site|same-site` or a foreign `Origin` (Node sends neither). Quota JSON is `{providers:[{name,plan,limits:[{label,percent,...}]}]}`, which the page reads.
+- Still unverified: a live agent run (needs .NET 10, not available in the cloud container) and real quota data.
 - If nobody answers in time, Claude Code falls back to asking in the terminal.
