@@ -1,0 +1,2 @@
+The bridge uses the local HTTP API of PhoneBox (https://github.com/ersinkoc/phonebox, MIT, by ersinkoc).
+Macro Deck (https://github.com/Macro-Deck-App/Macro-Deck, Apache-2.0) is used unmodified as a separate install.

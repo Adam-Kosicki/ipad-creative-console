@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Claude Deck</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+body{margin:0;background:#111;color:#eee;font:20px -apple-system,Helvetica,sans-serif}
+h2{margin:16px;font-size:18px;color:#9ab}
+.card{margin:12px 16px;padding:16px;background:#222;border-radius:12px}
+.btn{display:inline-block;width:46%;padding:26px 0;margin:10px 1% 0;text-align:center;border-radius:12px;font-size:26px;font-weight:bold;color:#fff}
+.allow{background:#1e8e3e}.deny{background:#c5221f}
+.bar{height:14px;background:#333;border-radius:7px;margin-top:6px;overflow:hidden}
+.fill{height:14px;background:#4a90e2}.warn{background:#e2a14a}.crit{background:#e24a4a}
+small{color:#889}pre{white-space:pre-wrap;word-wrap:break-word;font-size:15px;color:#ccc}
+#st{position:fixed;top:4px;right:10px;font-size:13px;color:#889}
+</style></head><body>
+<div id="st">...</div>
+<h2>Claude approvals</h2><div id="ap"><div class="card"><small>None pending</small></div></div>
+<h2>Quotas</h2><div id="qu"></div>
+<script>
+// ES5 only (iOS 10 Safari): no arrow functions, fetch, template strings, let/const.
+var T=(location.search.match(/[?&]t=([^&]+)/)||[])[1]||'';
+function get(url,cb,method){var x=new XMLHttpRequest();x.open(method||'GET',url+(url.indexOf('?')<0?'?':'&')+'t='+T);
+ x.onreadystatechange=function(){if(x.readyState===4){var j=null;try{j=JSON.parse(x.responseText)}catch(e){}cb(x.status,j)}};x.send();}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function decide(id,d){get('/api/approvals/'+id+'?decision='+d,function(){pollA()},'POST')}
+function pollA(){get('/api/approvals',function(s,j){
+ document.getElementById('st').innerHTML=s===200?'online':'offline';
+ if(s!==200||!j)return;var h='',i=j.items||[];
+ for(var k=0;k<i.length;k++){var a=i[k];
+  h+='<div class="card"><b>'+esc(a.tool)+'</b> <small>'+esc(a.project)+'</small><pre>'+esc(a.detail)+'</pre>'+
+  '<a class="btn allow" href="javascript:decide(\''+a.id+'\',\'allow\')">Allow</a>'+
+  '<a class="btn deny" href="javascript:decide(\''+a.id+'\',\'deny\')">Deny</a></div>';}
+ document.getElementById('ap').innerHTML=h||'<div class="card"><small>None pending</small></div>';})}
+function pollQ(){get('/api/quotas',function(s,j){if(s!==200||!j)return;var h='',p=j.providers||[];
+ for(var k=0;k<p.length;k++){h+='<div class="card"><b>'+esc(p[k].name)+'</b> <small>'+esc(p[k].plan)+'</small>';
+  var l=p[k].limits||[];for(var m=0;m<l.length;m++){var pc=Math.max(0,Math.min(100,Math.round(l[m].percent)));
+   h+='<div>'+esc(l[m].label)+' <small>'+pc+'%</small><div class="bar"><div class="fill'+(pc>90?' crit':pc>70?' warn':'')+'" style="width:'+pc+'%"></div></div></div>';}
+  h+='</div>';}document.getElementById('qu').innerHTML=h})}
+pollA();pollQ();setInterval(pollA,1500);setInterval(pollQ,30000);
+</script></body></html>
