@@ -1,4 +1,4 @@
-# Claude allow/deny + quotas on the iPad (UNTESTED on real hardware)
+# Claude allow/deny + quotas on the iPad (tested with real agent on Linux; not yet on an iPad)
 
 PhoneBox's own panel needs a modern browser and USB pairing, so it won't load on iOS 10. Instead `bridge/` proxies three calls of the PhoneBox agent (`127.0.0.1:8765`) to a plain ES5 page:
 `GET /api/approvals`, `POST /api/approvals/{id}?decision=allow|deny|skip`, `GET /api/quotas`.
@@ -16,5 +16,6 @@ The bridge also polls `/api/state` every 2 s with `X-PhoneBox-App`: the agent on
 ## Notes / risks
 - Access is guarded only by the token in the URL, over plain HTTP on your LAN. Anyone on the network with the URL can approve Claude actions. Keep the token secret; use a trusted network.
 - Verified by reading PhoneBox source (not by running it): the agent requires Host `127.0.0.1`/`localhost` (the bridge connects to that), and `BrowserGuard` only rejects requests carrying `Sec-Fetch-Site: cross-site|same-site` or a foreign `Origin` (Node sends neither). Quota JSON is `{providers:[{name,plan,limits:[{label,percent,...}]}]}`, which the page reads.
-- Still unverified: a live agent run (needs .NET 10, not available in the cloud container) and real quota data.
+- **Tested end to end on Linux** against the real PhoneBox agent 0.9.12 (built with .NET 10): a simulated Claude Code `PermissionRequest` (POST `/api/hooks/claude/permission`) showed up in the bridge's `/api/approvals`, and `allow` through the bridge made the hook return `{"behavior":"allow"}`. Bridge and agent endpoints and headers all work.
+- Still unverified: rendering on a real iPad 4 / iOS 10 Safari, and real quota data (needs a logged-in Claude Code on the PC).
 - If nobody answers in time, Claude Code falls back to asking in the terminal.
