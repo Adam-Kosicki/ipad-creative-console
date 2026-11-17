@@ -87,7 +87,7 @@ if (!guard.test(html)) throw new Error('index.html: WebView guard not found, Pho
 html = html.replace(guard, 'var runs = true; return; // iPad build: syntax is lowered and cq units are polyfilled\n');
 const mod = '<script type="module" src="main.js"></script>';
 if (!html.includes(mod)) throw new Error('index.html: module script tag not found');
-html = html.replace(mod, '<script src="main.js"></script>');
+html = html.replace(mod, '<script src="main.js"></script>\n<script src="ipad-pager.js"></script>');
 html = html.replace('<script src="compat.js"></script>', '<script src="ipad-compat.js"></script>\n<script src="compat.js"></script>');
 // iOS: full screen when added to the Home Screen
 // native-feel overrides last, so they win over PhoneBox's rules
@@ -101,6 +101,7 @@ const shim = fs.readFileSync(path.join(here, '..', 'bridge', 'ipad-compat.js'), 
   .replace('/*MATH*/[]', JSON.stringify(MATH.map((x) => [x.f, x.a])));
 fs.writeFileSync(path.join(out, 'ipad-compat.js'), shim);
 fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad.css'), path.join(out, 'ipad.css'));
+fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad-pager.js'), path.join(out, 'ipad-pager.js'));
 for (const f of ['LICENSE']) if (fs.existsSync(path.join(repo, f))) fs.copyFileSync(path.join(repo, f), path.join(out, 'PHONEBOX-LICENSE'));
 console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length);
 

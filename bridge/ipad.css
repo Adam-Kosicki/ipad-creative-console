@@ -14,12 +14,17 @@ html {
 input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 img, svg { -webkit-user-drag: none; }
 
-/* Page swiping: iOS 10 has no scroll-snap-type, but it has the older -webkit- snap points, which give the same
-   one-page-per-swipe paging with native momentum as a built-in iOS app. */
-#pager {
-  -webkit-overflow-scrolling: touch;
-  -webkit-scroll-snap-type: mandatory;
-  -webkit-scroll-snap-points-x: repeat(100%);
+/* Page swiping is done by ipad-pager.js with a GPU transform; the pager itself must not scroll natively. */
+#pager { overflow: visible !important; -webkit-scroll-snap-type: none; }
+
+/* The iPad 4's GPU: no blurs, glows, drop shadows or endless animations (each one repaints every frame). */
+*, *::before, *::after {
+  -webkit-filter: none !important; filter: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  box-shadow: none !important; text-shadow: none !important;
+  -webkit-animation: none !important; animation: none !important;
 }
+#pager.fade { opacity: 0; }
+
 /* Lists inside widgets keep native momentum scrolling. */
 .s-list, .ps-list, .ap-detail, #ovGrid { -webkit-overflow-scrolling: touch; }

@@ -126,7 +126,7 @@
 
   // ResizeObserver: polled, good enough for a panel that only changes size on rotation.
   if (!w.ResizeObserver) {
-    w.ResizeObserver = function (cb) { this.cb = cb; this.els = []; var self = this; this.t = setInterval(function () { self._check(); }, 500); };
+    w.ResizeObserver = function (cb) { this.cb = cb; this.els = []; var self = this; this.t = setInterval(function () { self._check(); }, 2000); };
     w.ResizeObserver.prototype.observe = function (el) { this.els.push({ el: el, w: -1, h: -1 }); this._check(); };
     w.ResizeObserver.prototype.unobserve = function (el) { this.els = this.els.filter(function (e) { return e.el !== el; }); };
     w.ResizeObserver.prototype.disconnect = function () { this.els = []; clearInterval(this.t); };
@@ -170,7 +170,8 @@
       var p = t || src;
       e.clientX = p.clientX; e.clientY = p.clientY; e.pageX = p.pageX; e.pageY = p.pageY;
       e.screenX = p.screenX; e.screenY = p.screenY;
-      var target = (captured[e.pointerId]) || (t ? (type === 'pointerdown' ? src.target : document.elementFromPoint(p.clientX, p.clientY) || src.target) : src.target);
+      // iOS keeps a touch's target for its whole life, so no per-move hit testing (slow on the iPad 4)
+      var target = captured[e.pointerId] || src.target;
       if (!target.dispatchEvent(e)) src.preventDefault();
       if (type === 'pointerup' || type === 'pointercancel') delete captured[e.pointerId];
     };
@@ -255,13 +256,29 @@
       setSize(el, wd, ht);
     }
   };
-  var queued = false;
-  var queue = function () { if (queued) return; queued = true; requestAnimationFrame(function () { queued = false; measure(); }); };
-  w.addEventListener('resize', queue);
+  // Measure on load, rotation and when widgets are added; not on every DOM change (clocks and stats update every
+  // second, and re-measuring 100+ widgets each time made the iPad 4 stutter).
+  var measureNew = function (nodes) {
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n.nodeType !== 1) continue;
+      if (n.matches && n.matches(sel)) measureOne(n);
+      if (n.firstElementChild) { var inner = n.querySelectorAll(sel); for (var j = 0; j < inner.length; j++) measureOne(inner[j]); }
+    }
+  };
+  var measureOne = function (el) {
+    var wd = el.clientWidth, ht = el.clientHeight;
+    if (el.__cqw === wd && el.__cqh === ht) return;
+    el.__cqw = wd; el.__cqh = ht;
+    setSize(el, wd, ht);
+  };
+  w.addEventListener('resize', function () { setTimeout(measure, 50); });
   w.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
   document.addEventListener('DOMContentLoaded', function () {
     measure();
-    if (w.MutationObserver) new MutationObserver(queue).observe(document.body, { childList: true, subtree: true });
-    setInterval(measure, 2000);
+    if (sel && w.MutationObserver) new MutationObserver(function (list) {
+      for (var i = 0; i < list.length; i++) if (list[i].addedNodes.length) measureNew(list[i].addedNodes);
+    }).observe(document.body, { childList: true, subtree: true });
+    setInterval(measure, 15000);
   });
 })();
