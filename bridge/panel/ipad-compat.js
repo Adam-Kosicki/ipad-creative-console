@@ -50,11 +50,28 @@
       return parts;
     };
   }
-  // scrollTo({ left, top }) on elements (Safari 10.1 has only window.scrollTo(x, y))
-  if (!Element.prototype.scrollTo) Element.prototype.scrollTo = function (a, b) {
-    if (a && typeof a === 'object') { if (a.left !== undefined) this.scrollLeft = a.left; if (a.top !== undefined) this.scrollTop = a.top; }
-    else { this.scrollLeft = a; this.scrollTop = b; }
-  };
+  // el.scrollTo({ left, top, behavior }) (Safari 10.1 has no element scrollTo and no smooth scrolling): jump, or
+  // glide with an ease-out over 300 ms like a native page change.
+  if (!('scrollBehavior' in document.documentElement.style)) {
+    var nativeScrollTo = Element.prototype.scrollTo;
+    Element.prototype.scrollTo = function (a, b) {
+      var el = this, left = a, top = b, smooth = false;
+      if (a && typeof a === 'object') { left = a.left; top = a.top; smooth = a.behavior === 'smooth'; }
+      if (left === undefined) left = el.scrollLeft;
+      if (top === undefined) top = el.scrollTop;
+      if (el.__pbGlide) cancelAnimationFrame(el.__pbGlide);
+      if (!smooth) { if (nativeScrollTo) nativeScrollTo.call(el, left, top); else { el.scrollLeft = left; el.scrollTop = top; } return; }
+      var x0 = el.scrollLeft, y0 = el.scrollTop, t0 = Date.now();
+      var step = function () {
+        var k = Math.min(1, (Date.now() - t0) / 300), e = 1 - Math.pow(1 - k, 3);
+        el.scrollLeft = x0 + (left - x0) * e; el.scrollTop = y0 + (top - y0) * e;
+        el.__pbGlide = k < 1 ? requestAnimationFrame(step) : 0;
+      };
+      step();
+    };
+  }
+  // No pinch zoom of the whole panel (iOS 10 ignores user-scalable=no).
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
   if (!Element.prototype.toggleAttribute) Element.prototype.toggleAttribute = function (n, f) {
     var on = f === undefined ? !this.hasAttribute(n) : !!f;
     if (on) this.setAttribute(n, ''); else this.removeAttribute(n);

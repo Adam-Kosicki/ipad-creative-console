@@ -90,6 +90,8 @@ if (!html.includes(mod)) throw new Error('index.html: module script tag not foun
 html = html.replace(mod, '<script src="main.js"></script>');
 html = html.replace('<script src="compat.js"></script>', '<script src="ipad-compat.js"></script>\n<script src="compat.js"></script>');
 // iOS: full screen when added to the Home Screen
+// native-feel overrides last, so they win over PhoneBox's rules
+html = html.replace('</head>', '<link rel="stylesheet" href="ipad.css">\n</head>');
 html = html.replace('<title>', '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black">\n<title>');
 fs.writeFileSync(path.join(out, 'index.html'), html);
 
@@ -98,6 +100,7 @@ const shim = fs.readFileSync(path.join(here, '..', 'bridge', 'ipad-compat.js'), 
   .replace('/*CONTAINERS*/[]', JSON.stringify([...containers]))
   .replace('/*MATH*/[]', JSON.stringify(MATH.map((x) => [x.f, x.a])));
 fs.writeFileSync(path.join(out, 'ipad-compat.js'), shim);
+fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad.css'), path.join(out, 'ipad.css'));
 for (const f of ['LICENSE']) if (fs.existsSync(path.join(repo, f))) fs.copyFileSync(path.join(repo, f), path.join(out, 'PHONEBOX-LICENSE'));
 console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length);
 
