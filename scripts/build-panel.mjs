@@ -82,6 +82,10 @@ for (const d of fs.readdirSync(src)) {
   js = js.replace(/\\u2733(?![\\uFE0EF])/gi, '\\u2733\\uFE0E').replace(/\u2733(?![\uFE0E\uFE0F])/g, '\u2733\uFE0E');
   // space-separated hsl(120 70% 65%) is Safari 12.1+: letter tiles for apps without an icon came out colourless
   js = js.replace(/hsl\(([^()\s,]+) (\d+%) (\d+%)\)/g, 'hsl($1, $2, $3)');
+  // lite mode (ipad-lite.js) names its tabs after the pages: put each page's title on its section
+  const pageId = 'sec.dataset.id = p.id;';
+  if (!js.includes(pageId)) throw new Error('main.js: page section id not found, PhoneBox changed; update build-panel.mjs');
+  js = js.replace(pageId, pageId + ' sec.dataset.title = `${p.icon || ""} ${p.title || ""}`.trim();');
   fs.writeFileSync(f, js);
   console.log('dataset deletes rewritten:', n);
 }
@@ -93,11 +97,11 @@ if (!guard.test(html)) throw new Error('index.html: WebView guard not found, Pho
 html = html.replace(guard, 'var runs = true; return; // iPad build: syntax is lowered and cq units are polyfilled\n');
 const mod = '<script type="module" src="main.js"></script>';
 if (!html.includes(mod)) throw new Error('index.html: module script tag not found');
-html = html.replace(mod, '<script src="main.js"></script>\n<script src="ipad-pager.js"></script>');
+html = html.replace(mod, '<script src="ipad-lite.js"></script>\n<script src="main.js"></script>\n<script src="ipad-pager.js"></script>');
 html = html.replace('<script src="compat.js"></script>', '<script src="ipad-compat.js"></script>\n<script src="compat.js"></script>');
 // iOS: full screen when added to the Home Screen
 // native-feel overrides last, so they win over PhoneBox's rules
-html = html.replace('</head>', '<link rel="stylesheet" href="ipad.css">\n</head>');
+html = html.replace('</head>', '<link rel="stylesheet" href="ipad.css">\n<link rel="stylesheet" href="ipad-lite.css">\n</head>');
 html = html.replace('<title>', '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black">\n<title>');
 fs.writeFileSync(path.join(out, 'index.html'), html);
 
@@ -109,7 +113,7 @@ const shim = fs.readFileSync(path.join(here, '..', 'bridge', 'ipad-compat.js'), 
   .replace('/*ASPECT*/[]', JSON.stringify(ASPECT));
 fs.writeFileSync(path.join(out, 'ipad-compat.js'), shim);
 fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad.css'), path.join(out, 'ipad.css'));
-fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad-pager.js'), path.join(out, 'ipad-pager.js'));
+for (const f of ['ipad-pager.js', 'ipad-lite.js', 'ipad-lite.css']) fs.copyFileSync(path.join(here, '..', 'bridge', f), path.join(out, f));
 for (const f of ['LICENSE']) if (fs.existsSync(path.join(repo, f))) fs.copyFileSync(path.join(repo, f), path.join(out, 'PHONEBOX-LICENSE'));
 console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length,
   '· color-mix:', COLORS.length, '· aspect-ratio:', ASPECT.length);
