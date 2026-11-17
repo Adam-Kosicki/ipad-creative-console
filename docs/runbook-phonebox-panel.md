@@ -30,12 +30,11 @@ To rebuild after a PhoneBox update: `npm i --no-save esbuild@0.24.2`, then
 `node scripts/build-panel.mjs <path to a phonebox clone>`.
 
 ## Tested
-- Through the bridge against PhoneBox's own demo data, in Chromium at iPad size (1024×768) with the modern APIs
-  removed so the polyfills run: the panel boots with no errors, all 30 demo pages build (110 widgets), quotas show,
-  touch swipes change pages.
-- **Not yet on a real iPad 4.** Expect rough edges: Safari 10 has no flexbox `gap` (tighter spacing), no
-  `aspect-ratio`, no `@container` rules (some widgets keep details they would hide when small), and the A6 chip
-  may be slow on busy pages. Keep pages light.
+- On a real iPad 4 (iOS 10.3.3): all seven default pages render, buttons work (media, shortcuts), swiping runs at roughly
+  32 to 57 fps, Claude usage and sessions show live data.
+- In Chromium at 1024×768 with the modern APIs removed, against PhoneBox's own demo data: all 30 demo pages build with no errors.
+- Known gaps: no flexbox `gap` (emulated with margins), no `@container` rules (some widgets keep details they would hide
+  when small), no microphone. Keep pages light: the A6 chip is slow with many charts.
 
 ## Security
 Same as the simple page: the token is the only guard, over plain HTTP on your LAN. The bridge forwards only the
