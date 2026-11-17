@@ -14,6 +14,12 @@
     d = d === undefined ? 1 : d;
     return d < 1 ? this.slice() : this.reduce(function (a, v) { return a.concat(Array.isArray(v) ? v.flat(d - 1) : v); }, []);
   };
+  // Target of the build's rewrite of `delete el.dataset.key` (throws in strict code on Safari 10).
+  w.__pbDeleteData = function (el, key) {
+    if (el && el.removeAttribute) el.removeAttribute('data-' + String(key).replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }));
+    return true;
+  };
+
   // for...of / spread over DOM collections: Safari 10 only makes NodeList iterable. Give the other array-like
   // collections Array's iterator (seen on the iPad: "for (const sheet of document.styleSheets)" threw).
   if (w.Symbol && Symbol.iterator) {
@@ -165,6 +171,20 @@
     ['mousedown:pointerdown', 'mousemove:pointermove', 'mouseup:pointerup'].forEach(function (pair) {
       var p = pair.split(':');
       document.addEventListener(p[0], function (ev) { if (Date.now() - lastTouch > 800) fire(p[1], ev, null); }, true);
+    });
+    // el.onpointerdown = fn: Safari 10 has no such handler property, so make one that registers a listener.
+    ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (type) {
+      var prop = 'on' + type, slot = '__pb_' + prop;
+      if (prop in HTMLElement.prototype) return;
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get: function () { return this[slot] || null; },
+        set: function (fn) {
+          if (this[slot]) this.removeEventListener(type, this[slot]);
+          this[slot] = typeof fn === 'function' ? fn : null;
+          if (this[slot]) this.addEventListener(type, this[slot]);
+        },
+      });
     });
     w.PointerEvent = function () {};
   }

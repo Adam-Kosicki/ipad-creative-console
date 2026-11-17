@@ -56,6 +56,30 @@ for (const d of fs.readdirSync(src)) {
   fs.cpSync(p, path.join(out, d), { recursive: true, filter: (s) => !s.endsWith('.js') });
 }
 
+// Safari 10 throws "TypeError: Unable to delete property" for `delete el.dataset.x` in strict code (the modules
+// are strict). Rewrite each one to a helper that removes the data-* attribute instead.
+{
+  const f = path.join(out, 'main.js');
+  let js = fs.readFileSync(f, 'utf8'), n = 0;
+  let res = '', i = 0;
+  const re = /delete ([\w$]+(?:\.[\w$]+)*)\.dataset(\.([\w$]+)|\[)/g;
+  let m;
+  while ((m = re.exec(js))) {
+    let key, end;
+    if (m[3]) { key = JSON.stringify(m[3]); end = re.lastIndex; }
+    else {
+      let depth = 1, j = re.lastIndex;
+      for (; j < js.length && depth; j++) { if (js[j] === '[') depth++; else if (js[j] === ']') depth--; }
+      key = js.slice(re.lastIndex, j - 1); end = j;
+    }
+    res += js.slice(i, m.index) + `__pbDeleteData(${m[1]}, ${key})`;
+    i = end; re.lastIndex = end; n++;
+  }
+  js = res + js.slice(i);
+  fs.writeFileSync(f, js);
+  console.log('dataset deletes rewritten:', n);
+}
+
 // 2. index.html
 let html = fs.readFileSync(path.join(src, 'index.html'), 'utf8');
 const guard = /var runs = 'noModule' in document\.createElement\('script'\);\s*try \{ new Function\([^\n]*\n/;

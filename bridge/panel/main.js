@@ -108,10 +108,10 @@
       }
       for (const key of ["border", "shadow"]) {
         if (appearance[key] != null) element.dataset["widget" + key[0].toUpperCase() + key.slice(1)] = String(appearance[key]);
-        else delete element.dataset["widget" + key[0].toUpperCase() + key.slice(1)];
+        else __pbDeleteData(element, "widget" + key[0].toUpperCase() + key.slice(1));
       }
       if (appearance.style && appearance.style !== "default") element.dataset.widgetSurface = appearance.style;
-      else delete element.dataset.widgetSurface;
+      else __pbDeleteData(element, "widgetSurface");
     }
     function page(element, grid, appearance = {}) {
       grid.style.gap = appearance.gap != null ? appearance.gap + "px" : "";
@@ -2680,7 +2680,7 @@
       };
       function syncPauseUi() {
         if (paused) box.dataset.stackPaused = "1";
-        else delete box.dataset.stackPaused;
+        else __pbDeleteData(box, "stackPaused");
         if (dots) dots.classList.toggle("paused", paused);
         if (pauseBtn) {
           pauseBtn.classList.toggle("on", paused);
@@ -2854,7 +2854,7 @@
           var _a, _b;
           destroyed = true;
           clearHold();
-          delete box.dataset.stackPaused;
+          __pbDeleteData(box, "stackPaused");
           for (const child of children) {
             try {
               (_b = (_a = child.inst).destroy) == null ? void 0 : _b.call(_a);
