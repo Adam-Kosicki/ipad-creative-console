@@ -291,7 +291,7 @@ public class AssistantService extends Service {
 
     /** After the wake word: Google's recognizer turns the request into text, live on screen. */
     private void listenWithGoogle() {
-        if (stt == null) stt = new GoogleStt(this, prefs.stt());
+        if (stt == null || !stt.which().equals(prefs.stt())) stt = new GoogleStt(this, prefs.stt());
         stt.listen(new GoogleStt.Callback() {
             @Override public void onPartial(String text) {
                 lastHeard = text;

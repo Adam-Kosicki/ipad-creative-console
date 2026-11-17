@@ -40,6 +40,8 @@ final class GoogleStt {
         this.which = which;
     }
 
+    String which() { return which; }
+
     private ComponentName component() {
         if ("katniss".equals(which)) return new ComponentName("com.google.android.katniss",
                 "com.google.android.apps.tvsearch.voice.recognition.KatnissRecognitionService");
