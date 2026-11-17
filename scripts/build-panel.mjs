@@ -111,9 +111,8 @@ function rewriteCss(css) {
   containers ??= new Set();
   // selectors of rules that declare container-type: ipad-compat.js measures those elements
   for (const m of css.matchAll(/([^{}]+)\{[^{}]*container-type\s*:/g)) for (const s of m[1].split(',')) containers.add(s.trim());
-  // blocks guarded by container-unit support: Safari 10 skips them and uses the fallback before them, so drop them
-  // here too (otherwise a browser with cq support, like the test Chromium, shows something the iPad never will)
-  css = css.replace(/@supports\s*\([^)]*\dcq[a-z]+\)\s*\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
+  // blocks guarded by container-unit support: cq units are emulated, so keep their rules unconditionally
+  css = css.replace(/@supports\s*\([^)]*\dcq[a-z]+\)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g, '$1');
   css = lowerMath(css);
   css = css.replace(/(-?\d*\.?\d+)cq(w|h|i|b|min|max)\b/g, (_, n, u) => {
     const v = { w: 'cqw', i: 'cqw', h: 'cqh', b: 'cqh', min: 'cqmin', max: 'cqmax' }[u];
@@ -126,6 +125,7 @@ function rewriteCss(css) {
   }).join(', ') + ' {');
   css = css.replace(/(^|[;{\s])(row-|column-)?gap\s*:([^;}]+)/g, (m, pre, kind, val) =>
     `${pre}grid-${kind || ''}gap:${val};${kind || ''}gap:${val}`);
+  css += flexGapFallback(css);
   return css;
 }
 
@@ -136,6 +136,8 @@ var MATH; // (functions below run during the top-level build above, before later
 function lowerMath(css) {
   MATH ??= [];
   const SIMPLE = /^(-?\d*\.?\d+)(px|cqw|cqh|cqi|cqb|cqmin|cqmax|vw|vh|vmin|vmax)?$/;
+  // also calc(var(--x, d) * N unit): the factor is read from the container at runtime
+  const SCALED = /^calc\(var\((--[\w-]+),\s*(-?\d*\.?\d+)\)\s*\*\s*(-?\d*\.?\d+)(px|cqw|cqh|cqi|cqb|cqmin|cqmax|vw|vh|vmin|vmax)\)$/;
   const re = /(^|[^\w-])(clamp|min|max)\(/g;
   let m;
   while ((m = re.exec(css))) {
@@ -152,15 +154,44 @@ function lowerMath(css) {
     if (m[2] === 'clamp') pick = args[1];
     else pick = args.find((a) => /cq|v[wh]|%/.test(a) && !/env\(/.test(a)) || args.find((a) => !/env\(/.test(a)) || args[0];
     if (/[+\-*/]\s/.test(pick) && !/^calc\(/.test(pick)) pick = `calc(${pick})`;
-    const parsed = args.map((a) => SIMPLE.exec(a));
+    const parsed = args.map((a) => {
+      const m1 = SIMPLE.exec(a); if (m1) return [+m1[1], m1[2] || 'px'];
+      const m2 = SCALED.exec(a); if (m2) return [+m2[3], m2[4], m2[1], +m2[2]];
+      return null;
+    });
     if (parsed.every(Boolean)) {
       const key = m[2] + '(' + args.join(',') + ')';
       let n = MATH.findIndex((x) => x.key === key);
-      if (n < 0) { n = MATH.length; MATH.push({ key, f: m[2], a: parsed.map((p) => [+p[1], p[2] || 'px']) }); }
+      if (n < 0) { n = MATH.length; MATH.push({ key, f: m[2], a: parsed }); }
       pick = `var(--pbm${n}, ${pick})`;
     }
     css = css.slice(0, start) + pick + css.slice(i + 1);
     re.lastIndex = start;
   }
   return css;
+}
+
+// Flexbox gap (Safari 14.1+): for plain rules that are flex containers with a gap, add margins between children,
+// only when ipad-compat.js finds the browser lacks flex gap (it then sets html.no-flex-gap).
+function flexGapFallback(css) {
+  let out = '\n/* flex gap fallback */\n';
+  for (const m of css.matchAll(/(?<=^|\})\s*([^{}@]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim(), body = m[2];
+    if (!/display\s*:\s*(inline-)?flex\b/.test(body)) continue;
+    const g = /(?:^|;|\s)gap\s*:\s*([^;]+)/.exec(body);
+    if (!g) continue;
+    const parts = [];   // split "row col" at top-level spaces only (values can be calc(...))
+    let depth = 0, cur = '';
+    for (const ch of g[1].trim()) {
+      if (ch === '(') depth++; else if (ch === ')') depth--;
+      if (/\s/.test(ch) && depth === 0) { if (cur) parts.push(cur); cur = ''; } else cur += ch;
+    }
+    if (cur) parts.push(cur);
+    const column = /flex-direction\s*:\s*column/.test(body);
+    const v = column ? parts[0] : (parts[1] || parts[0]);
+    if (/^0(px)?$/.test(v)) continue;
+    const prop = column ? 'margin-top' : 'margin-left';
+    out += sel.split(/,(?![^(]*\))/).map((s) => `.no-flex-gap ${s.trim()} > * + *`).join(', ') + ` { ${prop}: ${v}; }\n`;
+  }
+  return out;
 }

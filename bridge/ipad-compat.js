@@ -213,8 +213,10 @@
   // clamp()/min()/max() with plain lengths: [fn, [[number, unit], ...]], set as --pbm<index> in px
   var MATH = /*MATH*/[];
   var sel = CONTAINERS.join(',');
-  var px = function (a, cw, ch) {
-    var n = a[0], vw = w.innerWidth / 100, vh = w.innerHeight / 100;
+  var px = function (a, cw, ch, el) {
+    var n = a[0];
+    if (a[2]) { var f = parseFloat(el.style.getPropertyValue(a[2]) || w.getComputedStyle(el).getPropertyValue(a[2])); n *= isNaN(f) ? a[3] : f; }
+    var vw = w.innerWidth / 100, vh = w.innerHeight / 100;
     switch (a[1]) {
       case 'px': return n;
       case 'cqw': case 'cqi': return n * cw;
@@ -235,10 +237,16 @@
     el.style.setProperty('--cqmin', Math.min(cw, ch) + 'px');
     el.style.setProperty('--cqmax', Math.max(cw, ch) + 'px');
     for (var k = 0; k < MATH.length; k++) {
-      var f = MATH[k][0], v = MATH[k][1].map(function (a) { return px(a, cw, ch); });
+      var f = MATH[k][0], v = MATH[k][1].map(function (a) { return px(a, cw, ch, el); });
       var r = f === 'clamp' ? Math.max(v[0], Math.min(v[1], v[2])) : f === 'min' ? Math.min.apply(Math, v) : Math.max.apply(Math, v);
       el.style.setProperty('--pbm' + k, Math.round(r * 100) / 100 + 'px');
     }
+  };
+  // cq units are relative to the container's content box: client size minus padding
+  var contentBox = function (el) {
+    var cs = w.getComputedStyle(el);
+    return [el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0),
+      el.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0)];
   };
   var measure = function () {
     // outside any container, cq units fall back to the viewport
@@ -250,7 +258,7 @@
     if (!sel) return;
     var els = document.querySelectorAll(sel);
     for (var i = 0; i < els.length; i++) {
-      var el = els[i], wd = el.clientWidth, ht = el.clientHeight;
+      var el = els[i], box = contentBox(el), wd = box[0], ht = box[1];
       if (el.__cqw === wd && el.__cqh === ht) continue;
       el.__cqw = wd; el.__cqh = ht;
       setSize(el, wd, ht);
@@ -267,7 +275,7 @@
     }
   };
   var measureOne = function (el) {
-    var wd = el.clientWidth, ht = el.clientHeight;
+    var box = contentBox(el), wd = box[0], ht = box[1];
     if (el.__cqw === wd && el.__cqh === ht) return;
     el.__cqw = wd; el.__cqh = ht;
     setSize(el, wd, ht);
@@ -275,6 +283,14 @@
   w.addEventListener('resize', function () { setTimeout(measure, 50); });
   w.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
   document.addEventListener('DOMContentLoaded', function () {
+    // flex gap support test: two 1px children in a flex row with 1px gap are 3px wide when it works
+    var t = document.createElement('div');
+    t.style.cssText = 'display:flex;gap:1px;position:absolute;visibility:hidden';
+    t.appendChild(document.createElement('div')); t.appendChild(document.createElement('div'));
+    t.firstChild.style.width = t.lastChild.style.width = '1px';
+    document.body.appendChild(t);
+    if (t.scrollWidth !== 3) document.documentElement.className += ' no-flex-gap';
+    document.body.removeChild(t);
     measure();
     if (sel && w.MutationObserver) new MutationObserver(function (list) {
       for (var i = 0; i < list.length; i++) if (list[i].addedNodes.length) measureNew(list[i].addedNodes);

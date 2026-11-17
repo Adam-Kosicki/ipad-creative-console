@@ -20,7 +20,7 @@ var TOKEN = process.env.BRIDGE_TOKEN || (function () {
 })();
 var OPEN_LAN = process.env.BRIDGE_OPEN_LAN === '1';
 var PAGE = path.join(__dirname, 'index.html');
-var PANEL = path.join(__dirname, 'panel');
+var PANEL = process.env.BRIDGE_PANEL_DIR ? path.resolve(process.env.BRIDGE_PANEL_DIR) : path.join(__dirname, 'panel'); // override for side-by-side tests
 // What the agent sees: a phone named "iPad", so it queues Claude approvals and lists the device in its settings.
 var PHONE_HEADERS = { 'X-PhoneBox-App': 'ipad-bridge', 'X-PhoneBox-Device': 'ipad-bridge', 'X-PhoneBox-Model': 'iPad (bridge)' };
 

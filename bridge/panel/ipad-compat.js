@@ -211,10 +211,12 @@
   // --cqw/--cqh/--cqmin/--cqmax in px, re-measured when the page changes.
   var CONTAINERS = [".radio-carousel",".w",".wc"];
   // clamp()/min()/max() with plain lengths: [fn, [[number, unit], ...]], set as --pbm<index> in px
-  var MATH = [["clamp",[[15,"px"],[2.5,"vw"],[24,"px"]]],["clamp",[[84,"px"],[78,"cqh"],[142,"px"]]],["clamp",[[6,"px"],[5,"cqh"],[12,"px"]]],["clamp",[[4,"px"],[4,"cqh"],[9,"px"]]],["clamp",[[42,"px"],[54,"cqh"],[88,"px"]]],["clamp",[[10,"px"],[10,"cqh"],[16,"px"]]],["clamp",[[9.5,"px"],[7.5,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[2.2,"vw"],[20,"px"]]],["clamp",[[10,"px"],[7,"cqmin"],[20,"px"]]],["min",[[760,"px"],[94,"vw"]]],["clamp",[[10,"px"],[5,"cqh"],[12.5,"px"]]],["clamp",[[11,"px"],[7.5,"cqh"],[19,"px"]]],["clamp",[[2,"px"],[4,"cqh"],[14,"px"]]],["clamp",[[18,"px"],[13,"cqh"],[34,"px"]]],["clamp",[[10,"px"],[5.4,"cqh"],[13,"px"]]],["clamp",[[8,"px"],[6,"cqmin"],[18,"px"]]],["min",[[40,"cqh"],[18,"cqw"]]],["clamp",[[10,"px"],[13,"cqh"],[15,"px"]]],["clamp",[[10,"px"],[8,"cqh"],[14,"px"]]],["clamp",[[8,"px"],[4,"cqh"],[16,"px"]]],["clamp",[[10,"px"],[3,"cqw"],[18,"px"]]],["clamp",[[8,"px"],[3,"cqw"],[18,"px"]]],["min",[[58,"cqh"],[34,"cqw"]]],["clamp",[[8,"px"],[6,"cqh"],[18,"px"]]],["clamp",[[9,"px"],[4.5,"cqh"],[13,"px"]]],["clamp",[[13,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[11,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[5,"px"],[9,"cqh"],[10,"px"]]],["clamp",[[8,"px"],[6,"cqw"],[12,"px"]]],["clamp",[[9,"px"],[12,"cqh"],[11,"px"]]],["clamp",[[16,"px"],[30,"cqh"],[40,"px"]]],["clamp",[[10,"px"],[14,"cqh"],[15,"px"]]],["clamp",[[9.5,"px"],[13,"cqh"],[13,"px"]]],["min",[[66,"cqh"],[88,"cqw"]]],["min",[[15,"cqh"],[22,"cqw"]]],["clamp",[[9,"px"],[6,"cqh"],[13,"px"]]],["clamp",[[9,"px"],[5.4,"cqh"],[12,"px"]]],["clamp",[[18,"px"],[15,"cqh"],[34,"px"]]],["clamp",[[13,"px"],[10,"cqh"],[20,"px"]]],["min",[[50,"cqh"],[170,"px"]]],["min",[[10,"cqh"],[28,"px"]]],["clamp",[[18,"px"],[8,"cqh"],[26,"px"]]],["min",[[58,"cqh"],[124,"px"]]],["clamp",[[16,"px"],[7,"cqmin"],[30,"px"]]],["clamp",[[10,"px"],[3.6,"cqmin"],[14,"px"]]],["min",[[40,"cqh"],[30,"cqw"]]],["clamp",[[10,"px"],[15,"cqh"],[18,"px"]]],["clamp",[[9.5,"px"],[10,"cqh"],[13,"px"]]],["min",[[36,"cqh"],[36,"cqw"]]],["min",[[36,"cqh"],[28,"cqw"]]],["clamp",[[9,"px"],[9,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[10,"px"],[6,"cqh"],[15,"px"]]],["min",[[52,"cqh"],[80,"cqw"]]],["clamp",[[30,"px"],[14,"cqh"],[46,"px"]]],["clamp",[[13,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[10,"px"],[11,"cqh"],[14,"px"]]],["min",[[38,"cqh"],[17,"cqw"]]],["clamp",[[8,"px"],[7,"cqmin"],[16,"px"]]],["min",[[55,"cqh"],[12,"cqw"]]],["min",[[42,"cqh"],[14,"cqw"]]],["min",[[42,"cqh"],[20,"cqw"]]],["clamp",[[10,"px"],[10,"cqh"],[14,"px"]]],["min",[[70,"cqh"],[80,"cqw"]]],["min",[[100,"cqh"],[100,"cqw"]]],["min",[[88,"cqh"],[100,"cqw"]]],["clamp",[[10,"px"],[6,"cqh"],[14,"px"]]],["min",[[30,"cqh"],[15,"cqw"]]],["min",[[38,"cqh"],[60,"cqw"]]],["min",[[48,"cqh"],[30,"cqw"]]],["min",[[84,"cqh"],[84,"cqw"]]],["clamp",[[13,"px"],[9,"cqh"],[26,"px"]]],["clamp",[[18,"px"],[16,"cqh"],[52,"px"]]],["clamp",[[10,"px"],[6,"cqmin"],[20,"px"]]],["min",[[60,"cqh"],[30,"cqw"]]],["clamp",[[10,"px"],[7,"cqh"],[14,"px"]]],["clamp",[[40,"px"],[14,"vmin"],[72,"px"]]],["clamp",[[17,"px"],[6,"vmin"],[32,"px"]]],["clamp",[[11,"px"],[16,"cqh"],[15,"px"]]],["clamp",[[14,"px"],[26,"cqh"],[26,"px"]]],["clamp",[[2,"px"],[6,"cqh"],[12,"px"]]],["min",[[26,"cqh"],[13,"cqw"]]],["max",[[2,"px"],[1.6,"cqh"]]],["clamp",[[10,"px"],[9,"cqh"],[14,"px"]]],["clamp",[[12,"px"],[9,"cqh"],[22,"px"]]],["min",[[46,"px"],[40,"cqw"]]],["clamp",[[10,"px"],[7,"cqh"],[13,"px"]]],["min",[[40,"cqh"],[22,"cqw"]]],["clamp",[[11,"px"],[8,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[7,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[11,"cqmin"],[38,"px"]]],["clamp",[[16,"px"],[9,"cqmin"],[34,"px"]]],["clamp",[[15,"px"],[14,"cqh"],[22,"px"]]],["clamp",[[12,"px"],[6,"cqmin"],[22,"px"]]],["clamp",[[22,"px"],[15,"cqmin"],[76,"px"]]],["clamp",[[11,"px"],[5,"cqmin"],[18,"px"]]],["min",[[34,"cqh"],[86,"px"]]],["min",[[10,"cqh"],[22,"px"]]]];
+  var MATH = [["clamp",[[15,"px"],[2.5,"vw"],[24,"px"]]],["clamp",[[84,"px"],[78,"cqh"],[142,"px"]]],["clamp",[[6,"px"],[5,"cqh"],[12,"px"]]],["clamp",[[4,"px"],[4,"cqh"],[9,"px"]]],["clamp",[[42,"px"],[54,"cqh"],[88,"px"]]],["clamp",[[10,"px"],[10,"cqh"],[16,"px"]]],["clamp",[[9.5,"px"],[7.5,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[2.2,"vw"],[20,"px"]]],["clamp",[[10,"px"],[7,"cqmin"],[20,"px"]]],["min",[[760,"px"],[94,"vw"]]],["clamp",[[10,"px"],[5,"cqh"],[12.5,"px"]]],["min",[[100,"cqh","--tf",0.6],[30,"cqw"]]],["clamp",[[11,"px"],[7.5,"cqh"],[19,"px"]]],["clamp",[[2,"px"],[4,"cqh"],[14,"px"]]],["clamp",[[18,"px"],[13,"cqh"],[34,"px"]]],["clamp",[[10,"px"],[5.4,"cqh"],[13,"px"]]],["clamp",[[8,"px"],[6,"cqmin"],[18,"px"]]],["min",[[40,"cqh"],[18,"cqw"]]],["clamp",[[10,"px"],[13,"cqh"],[15,"px"]]],["clamp",[[10,"px"],[8,"cqh"],[14,"px"]]],["clamp",[[8,"px"],[4,"cqh"],[16,"px"]]],["clamp",[[10,"px"],[3,"cqw"],[18,"px"]]],["clamp",[[8,"px"],[3,"cqw"],[18,"px"]]],["min",[[58,"cqh"],[34,"cqw"]]],["clamp",[[8,"px"],[6,"cqh"],[18,"px"]]],["clamp",[[9,"px"],[4.5,"cqh"],[13,"px"]]],["clamp",[[13,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[11,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[5,"px"],[9,"cqh"],[10,"px"]]],["clamp",[[8,"px"],[6,"cqw"],[12,"px"]]],["clamp",[[9,"px"],[12,"cqh"],[11,"px"]]],["clamp",[[16,"px"],[30,"cqh"],[40,"px"]]],["clamp",[[10,"px"],[14,"cqh"],[15,"px"]]],["clamp",[[9.5,"px"],[13,"cqh"],[13,"px"]]],["min",[[66,"cqh"],[88,"cqw"]]],["min",[[15,"cqh"],[22,"cqw"]]],["clamp",[[9,"px"],[6,"cqh"],[13,"px"]]],["clamp",[[9,"px"],[5.4,"cqh"],[12,"px"]]],["clamp",[[18,"px"],[15,"cqh"],[34,"px"]]],["clamp",[[13,"px"],[10,"cqh"],[20,"px"]]],["min",[[50,"cqh"],[170,"px"]]],["min",[[10,"cqh"],[28,"px"]]],["clamp",[[18,"px"],[8,"cqh"],[26,"px"]]],["min",[[58,"cqh"],[124,"px"]]],["clamp",[[16,"px"],[7,"cqmin"],[30,"px"]]],["clamp",[[10,"px"],[3.6,"cqmin"],[14,"px"]]],["min",[[40,"cqh"],[30,"cqw"]]],["clamp",[[10,"px"],[15,"cqh"],[18,"px"]]],["clamp",[[9.5,"px"],[10,"cqh"],[13,"px"]]],["min",[[36,"cqh"],[36,"cqw"]]],["min",[[36,"cqh"],[28,"cqw"]]],["clamp",[[9,"px"],[9,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[10,"px"],[6,"cqh"],[15,"px"]]],["min",[[52,"cqh"],[80,"cqw"]]],["clamp",[[30,"px"],[14,"cqh"],[46,"px"]]],["clamp",[[13,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[10,"px"],[11,"cqh"],[14,"px"]]],["min",[[38,"cqh"],[17,"cqw"]]],["clamp",[[8,"px"],[7,"cqmin"],[16,"px"]]],["min",[[55,"cqh"],[12,"cqw"]]],["min",[[42,"cqh"],[14,"cqw"]]],["min",[[42,"cqh"],[20,"cqw"]]],["clamp",[[10,"px"],[10,"cqh"],[14,"px"]]],["min",[[70,"cqh"],[80,"cqw"]]],["min",[[100,"cqh"],[100,"cqw"]]],["min",[[88,"cqh"],[100,"cqw"]]],["clamp",[[10,"px"],[6,"cqh"],[14,"px"]]],["min",[[30,"cqh"],[15,"cqw"]]],["min",[[38,"cqh"],[60,"cqw"]]],["min",[[48,"cqh"],[30,"cqw"]]],["min",[[84,"cqh"],[84,"cqw"]]],["clamp",[[13,"px"],[9,"cqh"],[26,"px"]]],["clamp",[[18,"px"],[16,"cqh"],[52,"px"]]],["clamp",[[10,"px"],[6,"cqmin"],[20,"px"]]],["min",[[60,"cqh"],[30,"cqw"]]],["clamp",[[12,"px"],[11,"cqh","--qf",1],[30,"px"]]],["clamp",[[10,"px"],[7,"cqh"],[14,"px"]]],["clamp",[[40,"px"],[14,"vmin"],[72,"px"]]],["clamp",[[17,"px"],[6,"vmin"],[32,"px"]]],["clamp",[[11,"px"],[16,"cqh"],[15,"px"]]],["clamp",[[14,"px"],[26,"cqh"],[26,"px"]]],["clamp",[[2,"px"],[6,"cqh"],[12,"px"]]],["min",[[26,"cqh"],[13,"cqw"]]],["max",[[2,"px"],[1.6,"cqh"]]],["clamp",[[10,"px"],[9,"cqh"],[14,"px"]]],["clamp",[[12,"px"],[9,"cqh"],[22,"px"]]],["min",[[46,"px"],[40,"cqw"]]],["clamp",[[10,"px"],[7,"cqh"],[13,"px"]]],["min",[[40,"cqh"],[22,"cqw"]]],["clamp",[[11,"px"],[8,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[7,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[11,"cqmin"],[38,"px"]]],["clamp",[[16,"px"],[9,"cqmin"],[34,"px"]]],["clamp",[[15,"px"],[14,"cqh"],[22,"px"]]],["clamp",[[12,"px"],[6,"cqmin"],[22,"px"]]],["clamp",[[22,"px"],[15,"cqmin"],[76,"px"]]],["clamp",[[11,"px"],[5,"cqmin"],[18,"px"]]],["min",[[34,"cqh"],[86,"px"]]],["min",[[10,"cqh"],[22,"px"]]]];
   var sel = CONTAINERS.join(',');
-  var px = function (a, cw, ch) {
-    var n = a[0], vw = w.innerWidth / 100, vh = w.innerHeight / 100;
+  var px = function (a, cw, ch, el) {
+    var n = a[0];
+    if (a[2]) { var f = parseFloat(el.style.getPropertyValue(a[2]) || w.getComputedStyle(el).getPropertyValue(a[2])); n *= isNaN(f) ? a[3] : f; }
+    var vw = w.innerWidth / 100, vh = w.innerHeight / 100;
     switch (a[1]) {
       case 'px': return n;
       case 'cqw': case 'cqi': return n * cw;
@@ -235,10 +237,16 @@
     el.style.setProperty('--cqmin', Math.min(cw, ch) + 'px');
     el.style.setProperty('--cqmax', Math.max(cw, ch) + 'px');
     for (var k = 0; k < MATH.length; k++) {
-      var f = MATH[k][0], v = MATH[k][1].map(function (a) { return px(a, cw, ch); });
+      var f = MATH[k][0], v = MATH[k][1].map(function (a) { return px(a, cw, ch, el); });
       var r = f === 'clamp' ? Math.max(v[0], Math.min(v[1], v[2])) : f === 'min' ? Math.min.apply(Math, v) : Math.max.apply(Math, v);
       el.style.setProperty('--pbm' + k, Math.round(r * 100) / 100 + 'px');
     }
+  };
+  // cq units are relative to the container's content box: client size minus padding
+  var contentBox = function (el) {
+    var cs = w.getComputedStyle(el);
+    return [el.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0),
+      el.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0)];
   };
   var measure = function () {
     // outside any container, cq units fall back to the viewport
@@ -250,7 +258,7 @@
     if (!sel) return;
     var els = document.querySelectorAll(sel);
     for (var i = 0; i < els.length; i++) {
-      var el = els[i], wd = el.clientWidth, ht = el.clientHeight;
+      var el = els[i], box = contentBox(el), wd = box[0], ht = box[1];
       if (el.__cqw === wd && el.__cqh === ht) continue;
       el.__cqw = wd; el.__cqh = ht;
       setSize(el, wd, ht);
@@ -267,7 +275,7 @@
     }
   };
   var measureOne = function (el) {
-    var wd = el.clientWidth, ht = el.clientHeight;
+    var box = contentBox(el), wd = box[0], ht = box[1];
     if (el.__cqw === wd && el.__cqh === ht) return;
     el.__cqw = wd; el.__cqh = ht;
     setSize(el, wd, ht);
@@ -275,6 +283,14 @@
   w.addEventListener('resize', function () { setTimeout(measure, 50); });
   w.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
   document.addEventListener('DOMContentLoaded', function () {
+    // flex gap support test: two 1px children in a flex row with 1px gap are 3px wide when it works
+    var t = document.createElement('div');
+    t.style.cssText = 'display:flex;gap:1px;position:absolute;visibility:hidden';
+    t.appendChild(document.createElement('div')); t.appendChild(document.createElement('div'));
+    t.firstChild.style.width = t.lastChild.style.width = '1px';
+    document.body.appendChild(t);
+    if (t.scrollWidth !== 3) document.documentElement.className += ' no-flex-gap';
+    document.body.removeChild(t);
     measure();
     if (sel && w.MutationObserver) new MutationObserver(function (list) {
       for (var i = 0; i < list.length; i++) if (list[i].addedNodes.length) measureNew(list[i].addedNodes);
