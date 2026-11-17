@@ -42,6 +42,9 @@ Try it without a PC agent: `node bridge/mock-agent.js &` then `BRIDGE_TOKEN=tok 
 - Polyfills for pointer events, `ResizeObserver`, `AbortController`, `Object.fromEntries` and more.
 - Page swiping is JavaScript with `translate3d` (no scroll snapping on iOS 10). Pages are separate layers, the background
   glow is a plain background, and charts on off-screen pages are hidden. On an iPad 4 this measured about 32 to 57 fps while swiping.
+- **Lite mode** (on by default on iOS 10 and older): pages don't follow your finger. A tab bar at the bottom names
+  each page; a tap or a short flick switches instantly, nothing animates, and pages are not separate GPU layers.
+  Open the panel with `?lite=0` to get the swiping pager back, or `?lite=1` to force lite on any device (remembered).
 - Not available on iOS 10: microphone input (voice widgets), `backdrop-filter`, animations (disabled for speed), `@container` rules.
 - Layout is tuned and tested on a 1024×768 iPad 4. Other devices should work but are untested.
 

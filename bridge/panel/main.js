@@ -6925,7 +6925,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       }
       const sec = h("section", "page", grid);
       PhoneBoxAppearance.page(sec, grid, pageAppearance);
-      sec.dataset.id = p.id;
+      sec.dataset.id = p.id; sec.dataset.title = `${p.icon || ""} ${p.title || ""}`.trim();
       pager.appendChild(sec);
     });
     const idx = Math.max(0, pages.findIndex((p) => p.id === prevId));

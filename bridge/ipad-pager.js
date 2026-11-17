@@ -7,6 +7,9 @@
 (function () {
   var pager = document.getElementById('pager');
   if (!pager) return;
+  // Lite mode (ipad-lite.js): pages never move under the finger. A flick or a tab switches instantly, with no glide
+  // and no per-page transform layers.
+  var LITE = !!window.__pbLite;
 
   var off = 0;            // current offset in px (what main.js sees as scrollLeft)
   var anim = 0;           // running glide (requestAnimationFrame id)
@@ -22,6 +25,7 @@
   // Each page is its own absolutely positioned layer moved with translate3d. (One huge pager layer, 7 pages wide at
   // retina resolution, was far too big for the iPad 4's GPU memory: swiping ran at ~12 fps.)
   function paint(x) {
+    if (LITE) return;
     var w = W(), kids = pager.children, c = Math.round(x / w);
     for (var i = 0; i < kids.length; i++) {
       if (Math.abs(i - c) > 1) continue;
@@ -64,7 +68,7 @@
   pager.scrollTo = function (a, b) {
     var left = a && typeof a === 'object' ? a.left : a;
     if (left === undefined) return;
-    if (a && a.behavior === 'smooth') glide(Math.max(0, Math.min(maxOff(), left)), 300);
+    if (a && a.behavior === 'smooth' && !LITE) glide(Math.max(0, Math.min(maxOff(), left)), 300);
     else pager.scrollLeft = left;
   };
 
@@ -81,7 +85,7 @@
 
   // ---- the swipe ----
   var NO_SWIPE = 'input, textarea, select, [contenteditable], .s-list, .vb, .radio-carousel-track, .ac-dial, .ps-list';
-  var x0 = 0, y0 = 0, start = 0, lock = '', hist = [], tracking = false;
+  var lastDx = 0, x0 = 0, y0 = 0, start = 0, lock = '', hist = [], tracking = false;
   // Swipe latency recorder (read with __swipeStats() from /__dbg/eval after swiping by hand): touchmove age when the
   // handler runs, time spent in the handler, and the gaps between animation frames while a finger is down.
   var R = { delay: [], hand: [], gaps: [], touching: false, last: 0, until: 0 };
@@ -101,7 +105,7 @@
     if (ov && !ov.hidden) return;
     if (anim) { cancelAnimationFrame(anim); anim = 0; }
     x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
-    start = off; lock = ''; hist = [[Date.now(), x0]]; tracking = true;
+    start = off; lock = ''; lastDx = 0; hist = [[Date.now(), x0]]; tracking = true;
   }, true);
   pager.addEventListener('touchmove', function (e) {
     var h0 = performance.now(), age = Date.now() - e.timeStamp; if (age > -1000 && age < 5000) R.delay.push(age);
@@ -113,6 +117,7 @@
     }
     if (lock !== 'x') return;
     e.preventDefault();
+    if (LITE) { hist.push([Date.now(), x]); if (hist.length > 6) hist.shift(); lastDx = dx; return; }
     var to = start - dx;
     if (to < 0) to = to / 3;                                  // rubber band at the ends
     else if (to > maxOff()) to = maxOff() + (to - maxOff()) / 3;
@@ -131,11 +136,13 @@
     if (lock !== 'x') return;
     var a = hist[0], b = hist[hist.length - 1];
     var v = b && a && b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : 0;   // px/ms, + = finger moving right
-    var dx = start - off;
+    var dx = LITE ? lastDx : start - off;                              // + = finger moved right
+    var far = LITE ? 50 : W() * 0.18;                                  // lite: nothing moves, so a short flick is enough
     var page = Math.round(start / W());
-    if (dx < -W() * 0.18 || v < -0.35) page += 1;
-    else if (dx > W() * 0.18 || v > 0.35) page -= 1;
+    if (dx < -far || v < -0.35) page += 1;
+    else if (dx > far || v > 0.35) page -= 1;
     page = Math.max(0, Math.min(count() - 1, page));
+    if (LITE) { if (page * W() !== off) set(page * W(), false); return; }
     glide(page * W(), Math.max(180, Math.min(320, Math.abs(page * W() - off) / 3)));
   }
   pager.addEventListener('touchend', end, true);

@@ -107,13 +107,17 @@ http.createServer(function (req, res) {
   if (!viaQuery && !lanOk && !same(cookie(req, 'bt'), TOKEN)) return send(res, 403, 'text/plain', 'forbidden: open the URL with ?t=<token>');
   var setCookie = viaQuery ? { 'Set-Cookie': 'bt=' + encodeURIComponent(TOKEN) + '; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict' } : null;
   var p = u.pathname;
+  // redirects to the panel drop the token from the address bar but keep other options (?lite=0|1)
+  var rest = Object.keys(u.query).filter(function (k) { return k !== 't'; })
+    .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(u.query[k]); }).join('&');
+  var panelUrl = '/panel/' + (rest ? '?' + rest : '');
 
   // the short link: http://<pc-ip>:8800 opens the panel; the simple approvals page is at /simple
-  if (p === '/') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
+  if (p === '/') return send(res, 302, 'text/plain', '', { Location: panelUrl, 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
   if (p === '/simple') return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(PAGE), setCookie);
-  if (p === '/panel') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
+  if (p === '/panel') return send(res, 302, 'text/plain', '', { Location: panelUrl, 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
   if (p.indexOf('/panel/') === 0) {
-    if (setCookie && p === '/panel/') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie['Set-Cookie'] });
+    if (setCookie && p === '/panel/') return send(res, 302, 'text/plain', '', { Location: panelUrl, 'Set-Cookie': setCookie['Set-Cookie'] });
     return serveStatic(res, PANEL, decodeURIComponent(p.slice(7)));
   }
   if (p.indexOf('/bench/') === 0) return serveStatic(res, path.join(__dirname, 'bench'), decodeURIComponent(p.slice(7)));   // swipe benchmark pages
