@@ -1956,7 +1956,7 @@
         backdrop.addEventListener("click", (e) => {
           if (e.target === backdrop) dismiss2();
         });
-        panel.append(h("div", "session-panel-head", h("span", null, s.tool === "codex" ? "\u25CE Codex" : "\u2733 Claude Code"), close), title);
+        panel.append(h("div", "session-panel-head", h("span", null, s.tool === "codex" ? "\u25CE Codex" : "\u2733\uFE0E Claude Code"), close), title);
         const rows = [
           ["Status", statusText(s)],
           ["Started", s.startedAt ? ageText(s.startedAt) : null],
@@ -1999,7 +1999,7 @@
               "button",
               "sess " + s.status,
               h("span", "st"),
-              h("span", "tl " + s.tool, s.tool === "claude" ? "\u2733" : "\u25CE"),
+              h("span", "tl " + s.tool, s.tool === "claude" ? "\u2733\uFE0E" : "\u25CE"),
               h("span", "sess-main", h("span", "nm", s.project || s.name), h("span", "sess-meta", [s.model, s.effort].filter(Boolean).join(" \xB7 ") || statusText(s))),
               h("span", "ds", shortDur(Date.now() - s.since))
             );
@@ -6367,7 +6367,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
   </div>
   <div class="offline-msg"><b data-i18n="panel.computerNotConnected">${t("panel.computerNotConnected")}</b>
     <span data-i18n="panel.offlineHelp">${t("panel.offlineHelp")}</span></div>`;
-  var Q_STYLE = { antigravity: { color: "#38bdf8", logo: "\u2726" }, claude: { color: "#d97757", logo: "\u2733" }, codex: { color: "#e5e7eb", logo: "\u25CE" } };
+  var Q_STYLE = { antigravity: { color: "#38bdf8", logo: "\u2726" }, claude: { color: "#d97757", logo: "\u2733\uFE0E" }, codex: { color: "#e5e7eb", logo: "\u25CE" } };
   function fmtReset(ts) {
     if (!ts) return "";
     const d = new Date(ts);
@@ -6521,7 +6521,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       return;
     }
     for (const i of d.instances) {
-      const primary = i.session ? "\u2733 " + i.session : i.window || i.args || d.title;
+      const primary = i.session ? "\u2733\uFE0E " + i.session : i.window || i.args || d.title;
       const secondary = [
         i.session ? i.args : i.window ? i.args : null,
         i.startedAt ? Date.now() - i.startedAt < 6e4 ? t("panel.justStarted") : t("panel.startedAgo", { dur: shortDur(Date.now() - i.startedAt) }) : null

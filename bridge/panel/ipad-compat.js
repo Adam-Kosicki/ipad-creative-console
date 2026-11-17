@@ -389,8 +389,13 @@
     for (var k = 0; k < list.length; k++) {
       var b = list[k];
       if (b.__pbw) continue;
+      try { wrapOne(b); } catch (err) { b.__pbw = true; }
+    }
+  };
+  var wrapOne = function (b) {
+    {
       var cs = w.getComputedStyle(b), d = cs.display;
-      if (d !== 'flex' && d !== 'inline-flex' && d !== 'grid' && d !== 'inline-grid') continue;
+      if (d !== 'flex' && d !== 'inline-flex' && d !== 'grid' && d !== 'inline-grid') return;
       b.__pbw = true;
       var grid = d.indexOf('grid') >= 0, inl = d.indexOf('inline') === 0;
       var span = document.createElement('span');
@@ -441,5 +446,6 @@
       }
     }).observe(document.body, { childList: true, subtree: true });
     setInterval(refresh, 15000);
+    setInterval(function () { wrapButtons(document.body); }, 1500);   // rebuilt lists (sessions...) get wrapped again
   });
 })();

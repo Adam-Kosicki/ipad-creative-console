@@ -77,6 +77,9 @@ for (const d of fs.readdirSync(src)) {
     i = end; re.lastIndex = end; n++;
   }
   js = res + js.slice(i);
+  // U+2733 renders as a green emoji tile on iOS 10 (Claude's session icon); VS15 asks for the plain glyph.
+  // Literals followed by VS16 (an emoji on purpose) are left alone.
+  js = js.replace(/\\u2733(?![\\uFE0EF])/gi, '\\u2733\\uFE0E').replace(/\u2733(?![\uFE0E\uFE0F])/g, '\u2733\uFE0E');
   // space-separated hsl(120 70% 65%) is Safari 12.1+: letter tiles for apps without an icon came out colourless
   js = js.replace(/hsl\(([^()\s,]+) (\d+%) (\d+%)\)/g, 'hsl($1, $2, $3)');
   fs.writeFileSync(f, js);

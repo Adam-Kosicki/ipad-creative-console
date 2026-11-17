@@ -28,3 +28,7 @@ img, svg { -webkit-user-drag: none; }
 
 /* Lists inside widgets keep native momentum scrolling. */
 .s-list, .ps-list, .ap-detail, #ovGrid { -webkit-overflow-scrolling: touch; }
+
+/* Disk meters (System > Memory): Safari 10 stretched every grid row to the card's free height. */
+.disks { -webkit-align-content: start; align-content: start; grid-auto-rows: -webkit-min-content; grid-auto-rows: min-content; }
+.disks > * { -webkit-align-self: start; align-self: start; }
