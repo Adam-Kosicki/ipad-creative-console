@@ -77,6 +77,27 @@ def save_sdk_token(token: str) -> str:
         return str(exc)
 
 
+def import_pairing(bundle_b64: str) -> str:
+    """Take over a Muse pairing made elsewhere (pc_pair.py) for TVs that can't advertise over BLE."""
+    import base64
+    from musegadget import config
+    try:
+        bundle = json.loads(base64.urlsafe_b64decode(bundle_b64.strip() + "=="))
+        ident, pairing = bundle["identity"], bundle["pairing"]
+        if not ident.get("mac") or not pairing.get("refresh_token"):
+            return "that pairing is incomplete"
+    except Exception as exc:
+        return f"couldn't read the pairing: {exc}"
+    config.save_json(config.IDENTITY_FILE, ident)
+    config.save_json(config.PAIRING_FILE, pairing)
+    from musegadget import identity
+    _state["ble_name"] = identity.load_or_create().ble_name
+    _state["paired"] = True
+    if _service is not None:  # the running link was built with the old identity
+        _service.identity = identity.load_or_create()
+    return "ok"
+
+
 def has_sdk_token() -> bool:
     from musegadget import config
     try:

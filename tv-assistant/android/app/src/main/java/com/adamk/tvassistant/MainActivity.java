@@ -106,6 +106,13 @@ public class MainActivity extends Activity {
         if (i.getBooleanExtra("pair", false)) {
             new Thread(() -> { Muse.init(this, t -> { }); Muse.pair(); }).start();
         }
+        String imported = i.getStringExtra("import_pairing");
+        if (imported != null) {
+            new Thread(() -> {
+                Muse.init(this, t -> { });
+                pendingNote = "Imported pairing: " + Muse.importPairing(imported);
+            }).start();
+        }
         String sdkToken = i.getStringExtra("sdk_token");
         if (sdkToken != null) {
             new Thread(() -> {

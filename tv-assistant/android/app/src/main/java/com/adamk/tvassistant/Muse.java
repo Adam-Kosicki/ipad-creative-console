@@ -36,6 +36,8 @@ final class Muse {
 
     static void pair() { module.callAttr("pair"); }
 
+    static String importPairing(String bundle) { return module.callAttr("import_pairing", bundle).toString(); }
+
     static String saveSdkToken(String token) { return module.callAttr("save_sdk_token", token).toString(); }
 
     /** Blocking: sends the voice note and waits for Muse's answer. */
