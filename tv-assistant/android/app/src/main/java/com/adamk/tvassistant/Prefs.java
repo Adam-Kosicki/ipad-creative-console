@@ -17,6 +17,9 @@ final class Prefs {
     float gain() { return p.getFloat("gain", 8f); }
     /** MediaRecorder.AudioSource: 6 = VOICE_RECOGNITION (default), 1 = MIC, 7 = VOICE_COMMUNICATION, 9 = UNPROCESSED. */
     int source() { return p.getInt("source", 6); }
+    /** Speech-to-text after the wake word: "default", "katniss", "tts" (Google's recognizers) or "off" (voice note to Muse). */
+    String stt() { return p.getString("stt", "default"); }
+    void setStt(String v) { p.edit().putString("stt", v).apply(); }
     void setGain(float g) { p.edit().putFloat("gain", g).apply(); }
     void setSource(int s) { p.edit().putInt("source", s).apply(); }
 

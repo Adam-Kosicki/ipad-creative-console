@@ -153,17 +153,12 @@ public class AssistantService extends Service {
         AudioRecord rec = null;
         try {
             wake = new WakeWord(this, "hey_jarvis_v0.1");
-            int min = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            Log.i(TAG, "mic source " + prefs.source() + ", gain " + prefs.gain());
-            rec = new AudioRecord(prefs.source(), RATE, AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT, Math.max(min, RATE * 2));
-            if (rec.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException("mic would not open");
-            rec.startRecording();
+            Log.i(TAG, "mic source " + prefs.source() + ", gain " + prefs.gain() + ", stt " + prefs.stt());
+            rec = openMic();
         } catch (Throwable t) {
             Log.e(TAG, "mic start failed", t);
             lastError = "Mic: " + t.getMessage();
             state = State.NO_MIC;
-            if (rec != null) rec.release();
             return;
         }
         state = State.IDLE;
@@ -175,6 +170,20 @@ public class AssistantService extends Service {
         long lastLog = 0;
 
         while (running) {
+            if (micLent) {
+                if (rec != null) { rec.stop(); rec.release(); rec = null; }
+                SystemClock.sleep(50);
+                continue;
+            }
+            if (rec == null) {
+                try {
+                    rec = openMic();
+                } catch (Throwable t) {
+                    Log.e(TAG, "mic reopen failed", t);
+                    SystemClock.sleep(500);
+                    continue;
+                }
+            }
             int got = 0;
             while (got < chunk.length && running) {
                 int n = rec.read(chunk, got, chunk.length - got);
@@ -217,6 +226,11 @@ public class AssistantService extends Service {
                         Log.i(TAG, "wake (score " + score + ")");
                         startListening();
                         requestLen = 0; quietMs = 0; sinceStartMs = 0; heardSpeech = false;
+                        if (useGoogleStt()) {
+                            micLent = true;
+                            rec.stop(); rec.release(); rec = null;  // the recognizer opens the mic itself
+                            listenWithGoogle();
+                        }
                     }
                     break;
                 case LISTENING:
@@ -250,9 +264,59 @@ public class AssistantService extends Service {
                     break; // THINKING / SPEAKING: ignore the mic so the TV doesn't hear itself
             }
         }
-        rec.stop();
-        rec.release();
+        if (rec != null) { rec.stop(); rec.release(); }
         wake.close();
+    }
+
+    private AudioRecord openMic() {
+        int min = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        AudioRecord rec = new AudioRecord(prefs.source(), RATE, AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, Math.max(min, RATE * 2));
+        if (rec.getState() != AudioRecord.STATE_INITIALIZED) {
+            rec.release();
+            throw new IllegalStateException("mic would not open");
+        }
+        rec.startRecording();
+        return rec;
+    }
+
+    /** True while Google's recognizer has the mic (our AudioRecord is closed). */
+    private volatile boolean micLent = false;
+    private volatile boolean sttBroken = false;
+    private GoogleStt stt;
+
+    private boolean useGoogleStt() {
+        return !sttBroken && !"off".equals(prefs.stt()) && prefs.bridge().isEmpty();
+    }
+
+    /** After the wake word: Google's recognizer turns the request into text, live on screen. */
+    private void listenWithGoogle() {
+        if (stt == null) stt = new GoogleStt(this, prefs.stt());
+        stt.listen(new GoogleStt.Callback() {
+            @Override public void onPartial(String text) {
+                lastHeard = text;
+                overlay.show("You: " + text + " …", 0);
+            }
+
+            @Override public void onDone(String text, int error, boolean unavailable) {
+                if (text != null) {
+                    lastHeard = text;
+                    state = State.THINKING;
+                    overlay.show("You said: \"" + text + "\"\n\nThinking…", 0);
+                    micLent = false;
+                    worker.submit(() -> ask(null, text));
+                    return;
+                }
+                if (unavailable) {
+                    sttBroken = true;
+                    lastError = "Google speech recognizer unavailable (error " + error + "); using voice notes";
+                }
+                overlay.hide();
+                worker.submit(() -> beep(ToneGenerator.TONE_PROP_NACK));
+                finishTurn();
+                micLent = false;
+            }
+        });
     }
 
     private void startListening() {
