@@ -257,7 +257,7 @@ public class AssistantService extends Service {
 
     // -- Asking Muse through the Pi --------------------------------------------
 
-    private void ask(byte[] wav, String text) {
+    private void ask(byte[] wav, String askText) {
         BridgeClient bridge = new BridgeClient(prefs.bridge(), prefs.token());
         boolean usePi = !prefs.bridge().isEmpty();
         try {
@@ -265,7 +265,7 @@ public class AssistantService extends Service {
             if (usePi && wav != null) {
                 r = bridge.ask(wav);
             } else if (Muse.ready()) {
-                r = wav != null ? Muse.ask(wav) : Muse.askText(text); // the TV itself is the Muse device
+                r = wav != null ? Muse.ask(wav) : Muse.askText(askText); // the TV itself is the Muse device
             } else {
                 say("I'm still starting up. Try again in a moment.");
                 return;
