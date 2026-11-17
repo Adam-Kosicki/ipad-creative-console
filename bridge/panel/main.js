@@ -18,6 +18,26 @@
     return a;
   };
   var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+  var __async = (__this, __arguments, generator) => {
+    return new Promise((resolve, reject) => {
+      var fulfilled = (value) => {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      var rejected = (value) => {
+        try {
+          step(generator.throw(value));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+      step((generator = generator.apply(__this, __arguments)).next());
+    });
+  };
 
   // ../../../tmp/claude-0/-home-claude/d7433526-111a-5017-bcc4-3fd104415c33/scratchpad/pb/src/android/app/src/main/assets/www/registry.js
   var W = {};
@@ -205,54 +225,58 @@
     at = 0;
     pending = null;
   }
-  async function deckState(force = false) {
-    if (!force && cached2 && performance.now() - at < 650) return cached2;
-    if (!force && pending) return pending;
-    const stamp = epoch;
-    const task = api("/controls/state", "GET", 15e3).then((data) => {
-      if (stamp === epoch) {
-        cached2 = data;
-        at = performance.now();
-      }
-      return data;
-    }).finally(() => {
-      if (pending === task) pending = null;
-    });
-    pending = task;
-    return task;
-  }
-  async function deckCommand(kind, values = {}) {
-    const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(values)) if (value != null) query.set(key, String(value));
-    invalidateDeckState();
-    const result = await api(`/controls/command/${encodeURIComponent(kind)}?${query}`, "POST", 2e4);
-    if (!result.ok) throw new Error(result.error || "Control is unavailable");
-    invalidateDeckState();
-    if (kind === "action" || kind === "sound-stop" || kind === "media") {
-      api("/state" + (evSeq != null ? "?ev=" + evSeq : "")).then((s) => {
-        var _a;
-        if (s && (evSeq == null || s.evSeq == null || s.evSeq >= evSeq) && (!((_a = D.state) == null ? void 0 : _a.ts) || !s.ts || s.ts >= D.state.ts)) applyState(s);
-      }).catch(() => {
+  function deckState(force = false) {
+    return __async(this, null, function* () {
+      if (!force && cached2 && performance.now() - at < 650) return cached2;
+      if (!force && pending) return pending;
+      const stamp = epoch;
+      const task = api("/controls/state", "GET", 15e3).then((data) => {
+        if (stamp === epoch) {
+          cached2 = data;
+          at = performance.now();
+        }
+        return data;
+      }).finally(() => {
+        if (pending === task) pending = null;
       });
-    }
-    return result;
+      pending = task;
+      return task;
+    });
+  }
+  function deckCommand(_0) {
+    return __async(this, arguments, function* (kind, values = {}) {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(values)) if (value != null) query.set(key, String(value));
+      invalidateDeckState();
+      const result = yield api(`/controls/command/${encodeURIComponent(kind)}?${query}`, "POST", 2e4);
+      if (!result.ok) throw new Error(result.error || "Control is unavailable");
+      invalidateDeckState();
+      if (kind === "action" || kind === "sound-stop" || kind === "media") {
+        api("/state" + (evSeq != null ? "?ev=" + evSeq : "")).then((s) => {
+          var _a;
+          if (s && (evSeq == null || s.evSeq == null || s.evSeq >= evSeq) && (!((_a = D.state) == null ? void 0 : _a.ts) || !s.ts || s.ts >= D.state.ts)) applyState(s);
+        }).catch(() => {
+        });
+      }
+      return result;
+    });
   }
   var fail = (error) => toast((error == null ? void 0 : error.message) || "The computer did not answer", "err");
   var button = (label, click, name = label) => {
     const b = h("button", "deck-button", label);
     b.type = "button";
     b.setAttribute("aria-label", name);
-    b.onclick = async () => {
+    b.onclick = () => __async(void 0, null, function* () {
       haptic();
       b.disabled = true;
       try {
-        await click();
+        yield click();
       } catch (e) {
         fail(e);
       } finally {
         b.disabled = false;
       }
-    };
+    });
     return b;
   };
   var selectedPlayer = (data, options) => {
@@ -289,14 +313,14 @@
       number.textContent = input.value;
       fill();
     };
-    input.onchange = async () => {
+    input.onchange = () => __async(this, null, function* () {
       editing = false;
       try {
-        await send(+input.value);
+        yield send(+input.value);
       } catch (e) {
         fail(e);
       }
-    };
+    });
     input.onpointerup = input.onpointercancel = input.onlostpointercapture = input.onblur = () => {
       editing = false;
     };
@@ -394,11 +418,11 @@
         return;
       }
       list.replaceChildren(...items.map((item) => {
-        const b = button(item.name, async () => {
+        const b = button(item.name, () => __async(this, null, function* () {
           if (which === "media") store.set("control-player", item.id);
-          else await deckCommand(which === "plans" ? "power-plan" : "default", { id: item.id, op: role });
+          else yield deckCommand(which === "plans" ? "power-plan" : "default", { id: item.id, op: role });
           signature = "";
-        });
+        }));
         b.classList.toggle("selected", item.id === chosen);
         b.setAttribute("aria-pressed", String(item.id === chosen));
         return b;
@@ -412,7 +436,7 @@
     const status = h("div", "deck-caption", power ? "Hold for 2 seconds" : "Release to restore the microphone");
     box.append(b, status);
     let held = false, lease = null, timer = 0, renewal = 0, device = null;
-    const end = async () => {
+    const end = () => __async(this, null, function* () {
       held = false;
       clearTimeout(timer);
       clearInterval(renewal);
@@ -420,11 +444,11 @@
       const old = lease;
       lease = null;
       if (old && !power) try {
-        await deckCommand("ptt", { op: "end", lease: old });
+        yield deckCommand("ptt", { op: "end", lease: old });
       } catch (_) {
       }
-    };
-    const begin = async (event) => {
+    });
+    const begin = (event) => __async(this, null, function* () {
       if (held || b.disabled) return;
       event.preventDefault();
       held = true;
@@ -434,27 +458,27 @@
       } catch (_) {
       }
       try {
-        const result = await deckCommand(power ? "power-arm" : "ptt", { id: power || device, op: "begin" });
+        const result = yield deckCommand(power ? "power-arm" : "ptt", { id: power || device, op: "begin" });
         lease = result.lease;
         if (!held) {
-          await end();
+          yield end();
           return;
         }
-        if (power) timer = setTimeout(async () => {
+        if (power) timer = setTimeout(() => __async(this, null, function* () {
           try {
-            await deckCommand("power", { id: power, lease });
+            yield deckCommand("power", { id: power, lease });
             status.textContent = "Power action scheduled";
           } catch (e) {
             fail(e);
           }
-          await end();
-        }, 1700);
+          yield end();
+        }), 1700);
         else renewal = setInterval(() => deckCommand("ptt", { op: "renew", lease }).catch(end), 1e3);
       } catch (e) {
         fail(e);
-        await end();
+        yield end();
       }
-    };
+    });
     b.onpointerdown = begin;
     b.onpointerup = end;
     b.onpointercancel = end;
@@ -569,10 +593,10 @@
       }
       grid.replaceChildren(...items.map((item) => {
         const label = h("span", "", item.name), state = h("small", "", item.state || "Ready");
-        const b = button("", async () => {
-          await deckCommand(item.kind === "profile" ? "profile" : "action", { id: item.id, op: item.kind === "radio" ? "toggle" : type === "app-dock" ? "focus" : "" });
+        const b = button("", () => __async(this, null, function* () {
+          yield deckCommand(item.kind === "profile" ? "profile" : "action", { id: item.id, op: item.kind === "radio" ? "toggle" : type === "app-dock" ? "focus" : "" });
           signature = "";
-        });
+        }));
         b.disabled = item.available === false;
         b.append(label, state);
         if (type === "dev-servers") return h("div", "deck-task", b, button("Stop", () => deckCommand("action", { id: item.id, op: "stop" }), "Stop " + item.name));
@@ -768,7 +792,7 @@
           el.type = "button";
           el.append(logoBox, name);
           entry = { el, img, name, fallback, logoBox, item, busy: false, logoKey: "" };
-          el.onclick = async () => {
+          el.onclick = () => __async(this, null, function* () {
             if (commandBusy || entry.busy) return;
             haptic();
             const seq = ++cmdSeq;
@@ -784,8 +808,8 @@
             commandBusy = true;
             entry.busy = true;
             try {
-              await deckCommand("action", { id: entry.item.id, op: "toggle" });
-              const fresh = await deckState(true);
+              yield deckCommand("action", { id: entry.item.id, op: "toggle" });
+              const fresh = yield deckState(true);
               if (seq !== cmdSeq) return;
               latestItems = filterItems(fresh.actions);
               for (const next of latestItems) {
@@ -806,7 +830,7 @@
               commandBusy = false;
               entry.busy = false;
             }
-          };
+          });
           cards.set(item.id, entry);
         } else {
           entry.item = item;
@@ -889,7 +913,7 @@
       toggle.textContent = t("w.listen");
       state.textContent = t("w.listeningOff");
     };
-    const toggle = button(t("w.listen"), async () => {
+    const toggle = button(t("w.listen"), () => __async(this, null, function* () {
       if (ctl) {
         stop();
         return;
@@ -897,7 +921,7 @@
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (!Audio || !window.ReadableStream) throw new Error("This WebView does not support live audio");
       context = new Audio();
-      await context.resume();
+      yield context.resume();
       ctl = new AbortController();
       toggle.textContent = t("w.stopListening");
       state.textContent = t("w.listeningOn");
@@ -906,14 +930,14 @@
         const r = box.getBoundingClientRect();
         if (document.hidden || r.right <= 0 || r.left >= innerWidth) stop();
       }, 250);
-      (async () => {
+      (() => __async(this, null, function* () {
         try {
-          const response = await fetch(API + "/controls/listen", { headers: PANEL_HEADERS, signal: own.signal });
+          const response = yield fetch(API + "/controls/listen", { headers: PANEL_HEADERS, signal: own.signal });
           if (!response.ok || !response.body) throw new Error("Listening is unavailable");
           const reader = response.body.getReader(), decoder = new TextDecoder();
           let text = "";
           while (ctl === own) {
-            const chunk = await reader.read();
+            const chunk = yield reader.read();
             if (chunk.done) break;
             text += decoder.decode(chunk.value, { stream: true });
             if (text.length > 1e6) throw new Error("Invalid audio stream");
@@ -947,8 +971,8 @@
         } finally {
           if (ctl === own) stop();
         }
-      })();
-    });
+      }))();
+    }));
     toggle.disabled = true;
     box.append(toggle, state);
     return { render(data) {
@@ -989,8 +1013,8 @@
         } else if (mode === "duck") {
           let enabled = false;
           const b = button("Enable ducking", () => {
-            var _a;
-            return deckCommand("duck", { op: enabled ? "off" : "on", value: (_a = o.level) != null ? _a : 25 });
+            var _a2;
+            return deckCommand("duck", { op: enabled ? "off" : "on", value: (_a2 = o.level) != null ? _a2 : 25 });
           });
           box.append(b);
           render = (data) => {
@@ -1003,11 +1027,11 @@
           box.append(list);
           let key = "";
           render = (data) => {
-            var _a;
+            var _a2;
             const next = JSON.stringify(data.profiles);
             if (next === key) return;
             key = next;
-            if (!((_a = data.profiles) == null ? void 0 : _a.length)) empty(list, "Save an audio profile in desktop settings");
+            if (!((_a2 = data.profiles) == null ? void 0 : _a2.length)) empty(list, "Save an audio profile in desktop settings");
             else list.replaceChildren(...data.profiles.map((p) => button(p.name, () => deckCommand("profile", { id: p.id }))));
           };
         } else if (mode === "sleep") {
@@ -1019,9 +1043,9 @@
             caption
           );
           render = (data) => {
-            var _a;
+            var _a2;
             player = selectedPlayer(data, o);
-            const timer = (_a = data.sleep) == null ? void 0 : _a.find((t2) => t2.id === (player == null ? void 0 : player.id));
+            const timer = (_a2 = data.sleep) == null ? void 0 : _a2.find((t2) => t2.id === (player == null ? void 0 : player.id));
             caption.textContent = timer ? `Pausing ${(player == null ? void 0 : player.name) || "player"} in ${Math.max(0, Math.ceil((timer.at - Date.now()) / 6e4))} min` : t("w.noSleepTimer");
           };
         } else if (mode === "brightness") {
@@ -1049,21 +1073,23 @@
         } else if (mode === "radio") render = radioView(box, o);
         else render = actionsView(box, o, type);
         return {
-          async update() {
-            if (loading || !alive || !render && !component) return;
-            loading = true;
-            try {
-              const data = await deckState();
-              if (alive) {
-                render == null ? void 0 : render(data);
-                component == null ? void 0 : component.render(data);
-                box.classList.remove("deck-offline");
+          update() {
+            return __async(this, null, function* () {
+              if (loading || !alive || !render && !component) return;
+              loading = true;
+              try {
+                const data = yield deckState();
+                if (alive) {
+                  render == null ? void 0 : render(data);
+                  component == null ? void 0 : component.render(data);
+                  box.classList.remove("deck-offline");
+                }
+              } catch (_) {
+                if (alive) box.classList.add("deck-offline");
+              } finally {
+                loading = false;
               }
-            } catch (_) {
-              if (alive) box.classList.add("deck-offline");
-            } finally {
-              loading = false;
-            }
+            });
           },
           destroy() {
             alive = false;
@@ -1100,10 +1126,12 @@
   ]) registerDeckWidget(type, title, mode);
   for (const type of Object.keys(groups)) registerDeckWidget(type, type.split("-").map((s) => s[0].toUpperCase() + s.slice(1)).join(" "));
   W["meeting-status"] = W.onair;
-  async function integrationCommand(path, values = {}) {
-    const result = await api("/controls/" + path + "?" + new URLSearchParams(values), "POST", 2e4);
-    if (!result.ok) throw new Error(result.error || "Integration refused this control");
-    return result;
+  function integrationCommand(_0) {
+    return __async(this, arguments, function* (path, values = {}) {
+      const result = yield api("/controls/" + path + "?" + new URLSearchParams(values), "POST", 2e4);
+      if (!result.ok) throw new Error(result.error || "Integration refused this control");
+      return result;
+    });
   }
   function integrationWidget(type, title, endpoint, create) {
     W[type] = { needs: ["tick"], create(box, { o }) {
@@ -1112,29 +1140,31 @@
       const root = h("div", "deck-list");
       box.append(root);
       let alive = true, busy = false, signature = "", data = null;
-      return { async update() {
-        if (!alive || busy) return;
-        busy = true;
-        try {
-          data = await api("/controls/" + endpoint, "GET", 2e4);
-          if (!alive) return;
-          if (root.contains(document.activeElement) && document.activeElement.matches("input,textarea,select") || root.matches(":active") || root.querySelector(":active")) return;
-          const key = JSON.stringify(data);
-          if (key === signature) return;
-          signature = key;
-          if (!data.connected) {
-            empty(root, data.error || "Connect this integration in desktop settings");
-            return;
+      return { update() {
+        return __async(this, null, function* () {
+          if (!alive || busy) return;
+          busy = true;
+          try {
+            data = yield api("/controls/" + endpoint, "GET", 2e4);
+            if (!alive) return;
+            if (root.contains(document.activeElement) && document.activeElement.matches("input,textarea,select") || root.matches(":active") || root.querySelector(":active")) return;
+            const key = JSON.stringify(data);
+            if (key === signature) return;
+            signature = key;
+            if (!data.connected) {
+              empty(root, data.error || "Connect this integration in desktop settings");
+              return;
+            }
+            root.replaceChildren();
+            create(root, data, (action, args) => integrationCommand(endpoint === "obs" ? "obs/" + action : "spotify/action/" + action, args).then(() => {
+              signature = "";
+            }), o);
+          } catch (error) {
+            if (alive) empty(root, error.message || "Integration is unavailable");
+          } finally {
+            busy = false;
           }
-          root.replaceChildren();
-          create(root, data, (action, args) => integrationCommand(endpoint === "obs" ? "obs/" + action : "spotify/action/" + action, args).then(() => {
-            signature = "";
-          }), o);
-        } catch (error) {
-          if (alive) empty(root, error.message || "Integration is unavailable");
-        } finally {
-          busy = false;
-        }
+        });
       }, destroy() {
         alive = false;
       } };
@@ -1423,7 +1453,7 @@
         setArtColor(averageColor(img));
       });
       img.addEventListener("error", () => img.classList.remove("on"));
-      box.querySelectorAll("[data-media]").forEach((btn) => btn.addEventListener("click", async () => {
+      box.querySelectorAll("[data-media]").forEach((btn) => btn.addEventListener("click", () => __async(this, null, function* () {
         haptic();
         const action = btn.dataset.media;
         if (action === "playpause" && media) {
@@ -1432,14 +1462,14 @@
           box.classList.toggle("playing", media.playing);
         }
         try {
-          const res = await api("/media/" + action, "POST");
+          const res = yield api("/media/" + action, "POST");
           if (res && typeof res === "object" && "media" in res) setMediaState(res.media);
           invalidateDeckState();
           emit("tick");
         } catch (_) {
         }
-      }));
-      q(".bar").addEventListener("click", async (e) => {
+      })));
+      q(".bar").addEventListener("click", (e) => __async(this, null, function* () {
         if (!media || !media.durMs || !media.canSeek) return;
         const r = e.currentTarget.getBoundingClientRect();
         const ms = Math.round((e.clientX - r.left) / r.width * media.durMs);
@@ -1447,10 +1477,10 @@
         media.posMs = ms;
         media.at = performance.now();
         try {
-          await api("/media/seek?ms=" + ms, "POST");
+          yield api("/media/seek?ms=" + ms, "POST");
         } catch (_) {
         }
-      });
+      }));
       const paintVol = (v) => {
         vol.style.setProperty("--p", v + "%");
         q(".vol-val").textContent = v;
@@ -1473,17 +1503,17 @@
         volumeRelease = setTimeout(() => setVolDragging(vol, false), 600);
       });
       vol.addEventListener("pointercancel", cancelVolumeDrag);
-      q(".mute").addEventListener("click", async () => {
+      q(".mute").addEventListener("click", () => __async(this, null, function* () {
         var _a;
         haptic();
         if (!((_a = D.state) == null ? void 0 : _a.audio) || D.state.audio.canControl === false) return;
         try {
-          const a = await api("/volume?op=mute", "POST");
+          const a = yield api("/volume?op=mute", "POST");
           D.state.audio = a;
           emit("state");
         } catch (_) {
         }
-      });
+      }));
       return {
         update(kind) {
           var _a, _b;
@@ -2434,12 +2464,12 @@
       const out = h("div", "cmd-o", "\u2026"), foot = h("div", "cmd-f", "");
       box.append(h("div", "w-title", o.title || "Command"), out, foot);
       let last = 0, busy = false, res = null;
-      const load = async (force) => {
+      const load = (force) => __async(this, null, function* () {
         var _a;
         if (busy) return;
         busy = true;
         try {
-          res = await api(`/widget/${encodeURIComponent(page.id)}/${encodeURIComponent(w.id)}${force ? "?force=true" : ""}`, "GET", 4e3);
+          res = yield api(`/widget/${encodeURIComponent(page.id)}/${encodeURIComponent(w.id)}${force ? "?force=true" : ""}`, "GET", 4e3);
           const text = (_a = res.output) != null ? _a : "";
           out.textContent = text || (res.running ? t("w.running") : t("w.noOutput"));
           const short = text.length <= 14 && !text.includes("\n");
@@ -2449,7 +2479,7 @@
           if (!res) out.textContent = online ? t("w.unavailable") : "\u2014";
         }
         busy = false;
-      };
+      });
       box.addEventListener("click", () => {
         haptic();
         last = Date.now();
@@ -3310,12 +3340,12 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       let data = null, lastKey = "";
       const list = h("div", "bt-list");
       box.append(h("div", "w-title", o.title || "Batteries"), list);
-      const load = async () => {
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/batteries");
+          data = yield api("/batteries");
         } catch (_) {
         }
-      };
+      });
       const render = () => {
         const devices = [...(data == null ? void 0 : data.devices) || []];
         if (o.phone !== false && bridge) {
@@ -3351,10 +3381,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           return row;
         }));
       };
-      const tick2 = every(3e4, async () => {
-        await load();
+      const tick2 = every(3e4, () => __async(this, null, function* () {
+        yield load();
         render();
-      });
+      }));
       return { update: () => {
         tick2();
         render();
@@ -3365,33 +3395,33 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     needs: ["tick"],
     create(box, { o }) {
       let data = null, lastKey = "", fetchedAt = 0, busy = null;
-      const load = async () => {
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/obs");
+          data = yield api("/obs");
           fetchedAt = Date.now();
         } catch (_) {
         }
-      };
+      });
       const dur = (ms) => {
         const s = Math.floor(ms / 1e3);
         return (s >= 3600 ? Math.floor(s / 3600) + ":" : "") + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
       };
-      const act = async (action, scene) => {
+      const act = (action, scene) => __async(this, null, function* () {
         haptic();
         busy = action + (scene || "");
         render(true);
         try {
-          const r = await fetch(`${API}/obs/${action}` + (scene ? "?scene=" + encodeURIComponent(scene) : ""), { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-          if (!r.ok) toast((await r.json().catch(() => ({}))).error || "OBS did not do it", "err");
+          const r = yield fetch(`${API}/obs/${action}` + (scene ? "?scene=" + encodeURIComponent(scene) : ""), { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+          if (!r.ok) toast((yield r.json().catch(() => ({}))).error || "OBS did not do it", "err");
         } catch (_) {
           toast(t("panel.pcNoAnswer"), "err");
         }
-        setTimeout(async () => {
-          await load();
+        setTimeout(() => __async(this, null, function* () {
+          yield load();
           busy = null;
           render(true);
-        }, 600);
-      };
+        }), 600);
+      });
       const render = (force = false) => {
         const s = data == null ? void 0 : data.snapshot;
         const since = Date.now() - fetchedAt;
@@ -3441,10 +3471,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           act("mic");
         });
       };
-      const tick2 = every(2e3, async () => {
-        await load();
+      const tick2 = every(2e3, () => __async(this, null, function* () {
+        yield load();
         render();
-      });
+      }));
       return { update: () => {
         tick2();
         render();
@@ -3466,29 +3496,29 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         }
         return w;
       };
-      const load = async () => {
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/discord");
+          data = yield api("/discord");
         } catch (_) {
         }
-      };
+      });
       const img = (kind, id, hash) => `${API}/discord/img?kind=${kind}&id=${encodeURIComponent(id)}&hash=${encodeURIComponent(hash)}`;
-      const act = async (action, channel) => {
+      const act = (action, channel) => __async(this, null, function* () {
         if (busy) return;
         haptic();
         busy = action + (channel || "");
         render(true);
         try {
-          const r = await fetch(`${API}/discord/${action}` + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-          if (!r.ok) toast((await r.json().catch(() => ({}))).error || t("w.discord.failed"), "err");
+          const r = yield fetch(`${API}/discord/${action}` + (channel ? "?channel=" + encodeURIComponent(channel) : ""), { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+          if (!r.ok) toast((yield r.json().catch(() => ({}))).error || t("w.discord.failed"), "err");
         } catch (_) {
           toast(t("panel.pcNoAnswer"), "err");
         }
-        await new Promise((done) => setTimeout(done, 600));
-        await load();
+        yield new Promise((done) => setTimeout(done, 600));
+        yield load();
         busy = null;
         render(true);
-      };
+      });
       const render = (force = false) => {
         const key = JSON.stringify([data, busy, [...open], box.clientHeight]);
         if (!force && key === lastKey) return;
@@ -3570,10 +3600,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         }
         box.replaceChildren(...kids);
       };
-      const tick2 = every(2e3, async () => {
-        await load();
+      const tick2 = every(2e3, () => __async(this, null, function* () {
+        yield load();
         render();
-      });
+      }));
       return { update: () => {
         tick2();
         render();
@@ -3669,28 +3699,28 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       const grid = h("div", "ha-grid");
       if (o.title) box.append(h("div", "w-title", o.title));
       box.append(grid);
-      const load = async () => {
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/ha/states?ids=" + encodeURIComponent(ids.join(",")));
+          data = yield api("/ha/states?ids=" + encodeURIComponent(ids.join(",")));
         } catch (_) {
         }
-      };
-      const toggle = async (e) => {
+      });
+      const toggle = (e) => __async(this, null, function* () {
         haptic();
         busy = e.id;
         render(true);
         try {
-          const r = await fetch(`${API}/ha/toggle/${encodeURIComponent(e.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-          if (!r.ok) toast((await r.json().catch(() => ({}))).error || "Could not switch it", "err");
+          const r = yield fetch(`${API}/ha/toggle/${encodeURIComponent(e.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+          if (!r.ok) toast((yield r.json().catch(() => ({}))).error || "Could not switch it", "err");
         } catch (_) {
           toast(t("panel.pcNoAnswer"), "err");
         }
-        setTimeout(async () => {
-          await load();
+        setTimeout(() => __async(this, null, function* () {
+          yield load();
           busy = null;
           render(true);
-        }, 700);
-      };
+        }), 700);
+      });
       const render = (force = false) => {
         const key = JSON.stringify([data, busy]);
         if (!force && key === lastKey) return;
@@ -3723,10 +3753,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           return tile;
         }), ...data.error ? [h("div", "ha-err", "\u26A0 " + data.error)] : []);
       };
-      const tick2 = every(4e3, async () => {
-        await load();
+      const tick2 = every(4e3, () => __async(this, null, function* () {
+        yield load();
         render();
-      });
+      }));
       return { update: () => {
         tick2();
         render();
@@ -3740,13 +3770,13 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       let data = null, open = null, busy = null, lastKey = "";
       const list = h("div", "dk-list"), head = h("div", "w-title", o.title || "Docker", h("span", "dk-count"));
       box.append(head, list);
-      const act = async (c, action) => {
+      const act = (c, action) => __async(this, null, function* () {
         haptic();
         busy = c.id;
         render(true);
         try {
-          const r = await fetch(`${API}/docker/${encodeURIComponent(c.id)}/${action}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-          const j = await r.json().catch(() => ({}));
+          const r = yield fetch(`${API}/docker/${encodeURIComponent(c.id)}/${action}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+          const j = yield r.json().catch(() => ({}));
           if (!r.ok) toast(j.error || `Could not ${action} ${c.name}`, "err");
           else toast(`${c.name}: ${action === "stop" ? "stopped" : action === "start" ? "started" : "restarted"}`, "ok");
         } catch (_) {
@@ -3754,15 +3784,15 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         }
         busy = null;
         open = null;
-        await load();
+        yield load();
         render(true);
-      };
-      const load = async () => {
+      });
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/docker");
+          data = yield api("/docker");
         } catch (_) {
         }
-      };
+      });
       const render = (force = false) => {
         const snap = data == null ? void 0 : data.snapshot;
         const matched = ((snap == null ? void 0 : snap.containers) || []).filter((c) => !filter || c.name.toLowerCase().includes(filter) || (c.project || "").toLowerCase().includes(filter));
@@ -3815,10 +3845,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           return h("div", "dk-wrap", row, h("div", "dk-acts", ...c.state === "running" ? [btn("\u21BB Restart", "restart"), btn("\u25A0 Stop", "stop", "danger")] : [btn("\u25B6 Start", "start", "go")]));
         }));
       };
-      const tick2 = every(4e3, async () => {
-        await load();
+      const tick2 = every(4e3, () => __async(this, null, function* () {
+        yield load();
         render();
-      });
+      }));
       return { update: () => {
         tick2();
         render();
@@ -3850,14 +3880,14 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       });
       const grid = h("div", "ap-grid");
       box.append(head, ...o.search === false ? [] : [search], grid);
-      const load = async () => {
+      const load = () => __async(this, null, function* () {
         try {
-          data = await api("/apps", "GET", 1e4);
+          data = yield api("/apps", "GET", 1e4);
         } catch (_) {
           return false;
         }
-      };
-      const open = async (a) => {
+      });
+      const open = (a) => __async(this, null, function* () {
         if (!(data == null ? void 0 : data.canOpen)) {
           toast("Opening apps needs an All apps widget saved on a page");
           return;
@@ -3866,8 +3896,8 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         busy = a.id;
         render(true);
         try {
-          const r = await fetch(`${API}/apps/open?id=${encodeURIComponent(a.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-          const j = await r.json().catch(() => ({}));
+          const r = yield fetch(`${API}/apps/open?id=${encodeURIComponent(a.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+          const j = yield r.json().catch(() => ({}));
           if (r.ok) toast(`Opening ${a.name}`, "ok");
           else toast(j.error || `Could not open ${a.name}`, "err");
         } catch (_) {
@@ -3875,7 +3905,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         }
         busy = null;
         render(true);
-      };
+      });
       const rank = (a) => {
         const i = pinned.indexOf(a.name.toLowerCase());
         return i < 0 ? pinned.length : i;
@@ -3944,11 +3974,11 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         }
         grid.replaceChildren(...items.map(tile));
       };
-      const tick2 = every(6e4, async () => {
-        const ok = await load();
+      const tick2 = every(6e4, () => __async(this, null, function* () {
+        const ok = yield load();
         render();
         return ok;
-      }, 5e3);
+      }), 5e3);
       return { update: () => {
         tick2();
         render();
@@ -4248,14 +4278,14 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         if (dragging) fromPointer(e);
       });
       bar.addEventListener("pointerup", () => setTimeout(() => dragging = false, 400));
-      const op = (q) => async () => {
+      const op = (q) => () => __async(this, null, function* () {
         haptic();
         try {
-          const a = await api("/volume?" + q, "POST");
+          const a = yield api("/volume?" + q, "POST");
           paint(a.volume, a.muted);
         } catch (_) {
         }
-      };
+      });
       mute.addEventListener("click", op("op=mute"));
       down.addEventListener("click", op("op=down"));
       up.addEventListener("click", op("op=up"));
@@ -4535,9 +4565,9 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         cat.textContent = message;
       };
       function loader(lat, lon, location2) {
-        return every(30 * 6e4, async () => {
+        return every(30 * 6e4, () => __async(this, null, function* () {
           try {
-            const d = await cached(`air:${location2}`, `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto`, 30 * 6e4);
+            const d = yield cached(`air:${location2}`, `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto`, 30 * 6e4);
             if (coordinates !== location2) return;
             const c = d.current || {};
             const aqi = c.european_aqi;
@@ -4552,7 +4582,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
             if (coordinates === location2) cat.textContent = t("w.unavailable");
             return false;
           }
-        });
+        }));
       }
       return {
         update() {
@@ -4608,13 +4638,13 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       const list = h("div", "hn-list", h("div", "empty", t("w.loading")));
       box.style.setProperty("--c", "#ff6600");
       box.append(h("div", "w-title", "Hacker News", h("span", "w-sub", "")), list);
-      const load = every(15 * 6e4, async () => {
+      const load = every(15 * 6e4, () => __async(this, null, function* () {
         try {
           const key = "hn";
           let data = store.get("nc:" + key, null);
           if (!data || Date.now() - data.at > 15 * 6e4) {
-            const ids = (await cached("hn-ids", "https://hacker-news.firebaseio.com/v0/topstories.json", 15 * 6e4)).slice(0, 15);
-            const items = await Promise.all(ids.map((id) => safeFetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then((r) => r.json()).catch(() => null)));
+            const ids = (yield cached("hn-ids", "https://hacker-news.firebaseio.com/v0/topstories.json", 15 * 6e4)).slice(0, 15);
+            const items = yield Promise.all(ids.map((id) => safeFetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then((r) => r.json()).catch(() => null)));
             data = { at: Date.now(), data: items.filter(Boolean).map((i) => ({ t: i.title, u: i.url, s: i.score, c: i.descendants || 0 })) };
             store.set("nc:" + key, data);
           }
@@ -4632,7 +4662,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           if (!list.querySelector(".hn-i")) list.replaceChildren(h("div", "empty", t("w.offline")));
           return false;
         }
-      });
+      }));
       return { update: load };
     }
   };
@@ -4647,7 +4677,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       if (o.title !== "") box.append(h("div", "w-title", o.title || "News", sub));
       box.append(list);
       let data = null, lastKey = "", busy = null;
-      const open = async (it) => {
+      const open = (it) => __async(this, null, function* () {
         if (!it.openable || busy) return;
         if (o.open !== true || !(data == null ? void 0 : data.canOpen)) {
           toast(t("w.feeds.openOff"), "err");
@@ -4658,8 +4688,8 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 8e3);
         try {
-          const r = await fetch(`${API}/feeds/open?id=${encodeURIComponent(it.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
-          const j = await r.json().catch(() => ({}));
+          const r = yield fetch(`${API}/feeds/open?id=${encodeURIComponent(it.id)}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
+          const j = yield r.json().catch(() => ({}));
           if (r.ok) toast(t("w.feeds.opening"), "ok");
           else toast(j.error || t("w.feeds.openFailed"), "err");
         } catch (_) {
@@ -4668,7 +4698,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           clearTimeout(timer);
           busy = null;
         }
-      };
+      });
       const render = () => {
         const items = ((data == null ? void 0 : data.items) || []).filter((i) => !only || i.source.toLowerCase() === only);
         const rows = Math.max(1, Math.floor((box.clientHeight - (o.title !== "" ? 30 : 6)) / 33));
@@ -4690,16 +4720,16 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           return row;
         }));
       };
-      const load = every(6e4, async () => {
+      const load = every(6e4, () => __async(this, null, function* () {
         try {
-          data = await api("/feeds", "GET", 5e3);
+          data = yield api("/feeds", "GET", 5e3);
           lastKey = "";
           render();
         } catch (_) {
           if (!data) list.replaceChildren(h("div", "empty", t("w.offline")));
           return false;
         }
-      });
+      }));
       return { update() {
         load();
         render();
@@ -4713,10 +4743,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       const syms = lines(o.symbols, ["TRY", "USD", "GBP"]).map((s) => s.toUpperCase()).slice(0, 8);
       const list = h("div", "fx-list", h("div", "empty", t("w.loading")));
       box.append(h("div", "w-title", `1 ${base}`, h("span", "w-sub", "")), list);
-      const load = every(60 * 6e4, async () => {
+      const load = every(60 * 6e4, () => __async(this, null, function* () {
         try {
           const from = new Date(Date.now() - 31 * 864e5).toISOString().slice(0, 10);
-          const d = await cached(`fx:${base}:${syms}`, `https://api.frankfurter.dev/v1/${from}..?base=${base}&symbols=${syms.join(",")}`, 60 * 6e4);
+          const d = yield cached(`fx:${base}:${syms}`, `https://api.frankfurter.dev/v1/${from}..?base=${base}&symbols=${syms.join(",")}`, 60 * 6e4);
           const days = Object.keys(d.rates || {}).sort();
           if (!days.length) {
             box.querySelector(".w-sub").textContent = "";
@@ -4740,7 +4770,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           list.replaceChildren(h("div", "empty", t("w.ratesUnavailable")));
           return false;
         }
-      });
+      }));
       return { update: load };
     }
   };
@@ -4751,9 +4781,9 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       const cur = (o.currency || "usd").toLowerCase();
       const list = h("div", "fx-list", h("div", "empty", t("w.loading")));
       box.append(h("div", "w-title", "Crypto", h("span", "w-sub", cur.toUpperCase() + " \xB7 24 h \xB7 7 d")), list);
-      const load = every(5 * 6e4, async () => {
+      const load = every(5 * 6e4, () => __async(this, null, function* () {
         try {
-          const d = await cached(`cg:${cur}:${coins}`, `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${cur}&ids=${coins.join(",")}&sparkline=true&price_change_percentage=24h`, 5 * 6e4);
+          const d = yield cached(`cg:${cur}:${coins}`, `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${cur}&ids=${coins.join(",")}&sparkline=true&price_change_percentage=24h`, 5 * 6e4);
           list.replaceChildren(...d.map((c) => {
             var _a, _b;
             const cv = h("canvas", "fx-sp");
@@ -4768,7 +4798,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           list.replaceChildren(h("div", "empty", t("w.pricesUnavailable")));
           return false;
         }
-      });
+      }));
       return { update: load };
     }
   };
@@ -4829,10 +4859,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         order = o.shuffle === false ? [...ids] : shuffle([...ids]);
         pos = 0;
       };
-      const loadList = async () => {
+      const loadList = () => __async(this, null, function* () {
         listAt = Date.now();
         try {
-          const r = await api("/photos", "GET", 1e4);
+          const r = yield api("/photos", "GET", 1e4);
           if (!alive) return;
           if (r.scanning) {
             listAt = Date.now() - 9 * 6e4;
@@ -4848,8 +4878,8 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           listAt = Date.now() - 9 * 6e4;
           if (!shown) say(t("w.offline"));
         }
-      };
-      const showNext = async () => {
+      });
+      const showNext = () => __async(this, null, function* () {
         if (inflight2 || !order.length) return;
         const id = order[pos];
         pos = (pos + 1) % order.length;
@@ -4864,16 +4894,16 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         });
         inflight2 = ctl;
         try {
-          const r = await Promise.race([fetch(`${API}/photos/${encodeURIComponent(id)}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal }), deadline]);
+          const r = yield Promise.race([fetch(`${API}/photos/${encodeURIComponent(id)}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal }), deadline]);
           if (!r.ok) throw new Error("HTTP " + r.status);
-          const url = URL.createObjectURL(await Promise.race([r.blob(), deadline]));
+          const url = URL.createObjectURL(yield Promise.race([r.blob(), deadline]));
           if (!alive) {
             URL.revokeObjectURL(url);
             return;
           }
           urls.add(url);
           const next = layers[1 - front], prev = layers[front];
-          const ok = await new Promise((done) => {
+          const ok = yield new Promise((done) => {
             next.onload = () => done(true);
             next.onerror = () => done(false);
             ctl.signal.addEventListener("abort", () => done(false));
@@ -4904,7 +4934,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           clearTimeout(late);
           inflight2 = null;
         }
-      };
+      });
       return {
         update() {
           if (!alive || !visible()) return;
@@ -4927,21 +4957,23 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
 
   // ../../../tmp/claude-0/-home-claude/d7433526-111a-5017-bcc4-3fd104415c33/scratchpad/pb/src/android/app/src/main/assets/www/widgets/console.js
   var STEP_DEG = 24;
-  async function post(path) {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 2e4);
-    try {
-      const r = await fetch(API + path, { method: "POST", cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
-      if (r.ok) return;
-      let error = "HTTP " + r.status;
+  function post(path) {
+    return __async(this, null, function* () {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 2e4);
       try {
-        error = (await r.json()).error || error;
-      } catch (_) {
+        const r = yield fetch(API + path, { method: "POST", cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
+        if (r.ok) return;
+        let error = "HTTP " + r.status;
+        try {
+          error = (yield r.json()).error || error;
+        } catch (_) {
+        }
+        throw new Error(error);
+      } finally {
+        clearTimeout(timer);
       }
-      throw new Error(error);
-    } finally {
-      clearTimeout(timer);
-    }
+    });
   }
   W["app-console"] = {
     needs: ["tick"],
@@ -4996,7 +5028,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         else if (!state.control || o.control !== true) say(t("w.console.controlOff"));
         else say("");
       };
-      const poll2 = async () => {
+      const poll2 = () => __async(this, null, function* () {
         if (polling) return;
         polling = true;
         lastPoll = Date.now();
@@ -5004,10 +5036,10 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           const ctl = new AbortController();
           const timer = setTimeout(() => ctl.abort(), 4e3);
           try {
-            const r = await fetch(`${API}/console?${wq}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
+            const r = yield fetch(`${API}/console?${wq}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal });
             if (!alive) return;
             missing = r.status === 404;
-            render(r.ok ? await r.json() : null);
+            render(r.ok ? yield r.json() : null);
           } finally {
             clearTimeout(timer);
           }
@@ -5016,7 +5048,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         } finally {
           polling = false;
         }
-      };
+      });
       const flush = () => {
         if (!alive || !visible()) pending2 = 0;
         if (sending || !pending2 || !profile) return;
@@ -5149,42 +5181,44 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       const say = (key) => {
         note.textContent = key ? t(key) : "";
       };
-      async function send(text) {
-        if (o.control !== true) {
-          say("w.dictate.controlOff");
-          return;
-        }
-        const query = encodeURIComponent(text);
-        if (text.length > MAX_CHARS || query.length > 12e3) {
-          say("w.dictate.tooLong");
-          return;
-        }
-        const ctl = new AbortController();
-        const timer = setTimeout(() => ctl.abort(), 3e4);
-        try {
-          const r = await fetch(`${API}/dictate?${wq}&text=${query}`, {
-            method: "POST",
-            cache: "no-store",
-            signal: ctl.signal,
-            headers: PANEL_HEADERS
-          });
-          if (!r.ok) {
-            let error = "HTTP " + r.status;
-            try {
-              error = (await r.json()).error || error;
-            } catch (_) {
+      function send(text) {
+        return __async(this, null, function* () {
+          if (o.control !== true) {
+            say("w.dictate.controlOff");
+            return;
+          }
+          const query = encodeURIComponent(text);
+          if (text.length > MAX_CHARS || query.length > 12e3) {
+            say("w.dictate.tooLong");
+            return;
+          }
+          const ctl = new AbortController();
+          const timer = setTimeout(() => ctl.abort(), 3e4);
+          try {
+            const r = yield fetch(`${API}/dictate?${wq}&text=${query}`, {
+              method: "POST",
+              cache: "no-store",
+              signal: ctl.signal,
+              headers: PANEL_HEADERS
+            });
+            if (!r.ok) {
+              let error = "HTTP " + r.status;
+              try {
+                error = (yield r.json()).error || error;
+              } catch (_) {
+              }
+              throw new Error(error);
             }
-            throw new Error(error);
+            if (alive) say("w.dictate.sent");
+          } catch (e) {
+            if (alive) {
+              say("");
+              toast((e == null ? void 0 : e.message) || t("w.offline"), "err");
+            }
+          } finally {
+            clearTimeout(timer);
           }
-          if (alive) say("w.dictate.sent");
-        } catch (e) {
-          if (alive) {
-            say("");
-            toast((e == null ? void 0 : e.message) || t("w.offline"), "err");
-          }
-        } finally {
-          clearTimeout(timer);
-        }
+        });
       }
       function onSpeech(kind, text) {
         if (!alive) return;
@@ -5290,7 +5324,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         img.onload = done;
         img.onerror = fail2;
       });
-      const one = async () => {
+      const one = () => __async(this, null, function* () {
         const ctl = new AbortController();
         inflight2 = ctl;
         let late;
@@ -5304,14 +5338,14 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
         });
         try {
           const fresh = urls[front] ? "" : "&fresh=true";
-          const r = await Promise.race([fetch(`${API}/camera?${wq}${fresh}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal }), deadline]);
+          const r = yield Promise.race([fetch(`${API}/camera?${wq}${fresh}`, { cache: "no-store", headers: PANEL_HEADERS, signal: ctl.signal }), deadline]);
           if (r.status === 204) return every2();
           if (r.ok) {
-            const url = URL.createObjectURL(await Promise.race([r.blob(), deadline]));
+            const url = URL.createObjectURL(yield Promise.race([r.blob(), deadline]));
             const back = 1 - front, next = layers[back];
             next.src = url;
             try {
-              await Promise.race([decoded(next), deadline]);
+              yield Promise.race([decoded(next), deadline]);
             } catch (_) {
               next.removeAttribute("src");
               URL.revokeObjectURL(url);
@@ -5330,7 +5364,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
             say("");
             return every2();
           }
-          const body = await Promise.race([r.json().catch(() => ({})), deadline]);
+          const body = yield Promise.race([r.json().catch(() => ({})), deadline]);
           clear();
           say(t(STATES[body.state] || "w.camera.noPicture"));
           return body.state === "pick" || body.state === "unknown" ? 5e3 : 1500;
@@ -5342,16 +5376,16 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
           clearTimeout(late);
           inflight2 = null;
         }
-      };
-      const loop = async () => {
+      });
+      const loop = () => __async(this, null, function* () {
         if (running) return;
         running = true;
         try {
           while (visible()) {
             const started = Date.now();
-            const wait = await one();
+            const wait = yield one();
             if (!visible()) break;
-            await new Promise((done) => setTimeout(done, Math.max(0, wait - (Date.now() - started))));
+            yield new Promise((done) => setTimeout(done, Math.max(0, wait - (Date.now() - started))));
           }
         } finally {
           running = false;
@@ -5360,7 +5394,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
             say(t("w.camera.starting"));
           }
         }
-      };
+      });
       return {
         update() {
           if (visible()) loop();
@@ -5393,24 +5427,26 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
   var mountedBars = /* @__PURE__ */ new Set();
   var shows = (m) => !document.body.classList.contains("night") && m.box.isConnected && pages[curPage] === m.page && !m.box.closest(".stack-item:not(.active)");
   var onScreen = () => [...mountedBars].some(shows);
-  async function keepAlive() {
-    let fast = false;
-    for (const m of mountedBars) if (!m.box.isConnected) mountedBars.delete(m);
-    if (onScreen()) {
-      const stream = streaming();
-      fast = !stream;
-      if (!stream || Date.now() - (D.spectrumWantAt || 0) >= 2e3) {
-        try {
-          const r = await api("/spectrum", "GET", 1500);
-          D.spectrumWantAt = Date.now();
-          D.spectrumShown = r.shown !== false;
-          D.spectrumOk = r.active !== false;
-          if (!stream && r.b) frame(r);
-        } catch (_) {
+  function keepAlive() {
+    return __async(this, null, function* () {
+      let fast = false;
+      for (const m of mountedBars) if (!m.box.isConnected) mountedBars.delete(m);
+      if (onScreen()) {
+        const stream = streaming();
+        fast = !stream;
+        if (!stream || Date.now() - (D.spectrumWantAt || 0) >= 2e3) {
+          try {
+            const r = yield api("/spectrum", "GET", 1500);
+            D.spectrumWantAt = Date.now();
+            D.spectrumShown = r.shown !== false;
+            D.spectrumOk = r.active !== false;
+            if (!stream && r.b) frame(r);
+          } catch (_) {
+          }
         }
       }
-    }
-    setTimeout(keepAlive, fast ? 40 : 250);
+      setTimeout(keepAlive, fast ? 40 : 250);
+    });
   }
   setTimeout(keepAlive, 250);
   function mix(stops, f) {
@@ -5669,36 +5705,40 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     a.push(v != null ? v : 0);
     if (a.length > HIST) a.shift();
   };
-  async function safeFetch(url, opts = {}) {
-    var _a;
-    try {
-      return await fetch(url, opts);
-    } catch (e) {
-      if (!((_a = opts.signal) == null ? void 0 : _a.aborted) && typeof url === "string" && url.startsWith("https://")) {
-        return await fetch(`${API}/proxy?url=${encodeURIComponent(url)}`, __spreadProps(__spreadValues({}, opts), {
-          headers: __spreadValues(__spreadValues({}, opts.headers || {}), PANEL_HEADERS)
-        }));
+  function safeFetch(_0) {
+    return __async(this, arguments, function* (url, opts = {}) {
+      var _a;
+      try {
+        return yield fetch(url, opts);
+      } catch (e) {
+        if (!((_a = opts.signal) == null ? void 0 : _a.aborted) && typeof url === "string" && url.startsWith("https://")) {
+          return yield fetch(`${API}/proxy?url=${encodeURIComponent(url)}`, __spreadProps(__spreadValues({}, opts), {
+            headers: __spreadValues(__spreadValues({}, opts.headers || {}), PANEL_HEADERS)
+          }));
+        }
+        throw e;
       }
-      throw e;
-    }
+    });
   }
-  async function api(path, method = "GET", timeout = 2500) {
-    const ctl = new AbortController();
-    const t2 = setTimeout(() => ctl.abort(), timeout);
-    const deadline = new Promise((_, fail2) => setTimeout(() => fail2(new Error("timeout")), timeout));
-    try {
-      const work = (async () => {
-        const r = await fetch(API + path, { method, signal: ctl.signal, cache: "no-store", headers: PANEL_HEADERS });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const ct = r.headers.get("content-type") || "";
-        return ct.includes("json") ? await r.json() : await r.text();
-      })();
-      work.catch(() => {
-      });
-      return await Promise.race([work, deadline]);
-    } finally {
-      clearTimeout(t2);
-    }
+  function api(path, method = "GET", timeout = 2500) {
+    return __async(this, null, function* () {
+      const ctl = new AbortController();
+      const t2 = setTimeout(() => ctl.abort(), timeout);
+      const deadline = new Promise((_, fail2) => setTimeout(() => fail2(new Error("timeout")), timeout));
+      try {
+        const work = (() => __async(this, null, function* () {
+          const r = yield fetch(API + path, { method, signal: ctl.signal, cache: "no-store", headers: PANEL_HEADERS });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const ct = r.headers.get("content-type") || "";
+          return ct.includes("json") ? yield r.json() : yield r.text();
+        }))();
+        work.catch(() => {
+        });
+        return yield Promise.race([work, deadline]);
+      } finally {
+        clearTimeout(t2);
+      }
+    });
   }
   var haptic = () => {
     try {
@@ -6151,44 +6191,46 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     const { lat, lon } = cfg.weather || DEFAULT_CFG.weather;
     return `v3:${lat},${lon}`;
   };
-  async function loadWeather(force = false) {
-    const { lat, lon } = cfg.weather || DEFAULT_CFG.weather;
-    const key = weatherKey();
-    const cached3 = store.get("wx", null);
-    if (D.weather && weatherFor !== key) {
-      D.weather = null;
-      emit("weather");
-    }
-    if (cached3 && cached3.key === key && !D.weather) {
-      D.weather = cached3.data;
-      weatherFor = key;
-      emit("weather");
-    }
-    if (!force && cached3 && cached3.key === key && Date.now() - cached3.at < 14 * 6e4) return;
-    if (!anyNeeds("weather")) return;
-    try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,is_day&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,daylight_duration,uv_index_max&timezone=auto&forecast_days=7`;
-      const ctl = new AbortController();
-      setTimeout(() => ctl.abort(), 8e3);
-      const r = await safeFetch(url, { signal: ctl.signal });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const data = await r.json();
-      if (!data || !data.current) throw new Error("no forecast");
-      if (weatherKey() !== key) return;
-      store.set("wx", { key, at: Date.now(), data });
-      D.weather = data;
-      weatherFor = key;
-      emit("weather");
-    } catch (_) {
-      if (!D.weather) {
-        D.weather = false;
+  function loadWeather(force = false) {
+    return __async(this, null, function* () {
+      const { lat, lon } = cfg.weather || DEFAULT_CFG.weather;
+      const key = weatherKey();
+      const cached3 = store.get("wx", null);
+      if (D.weather && weatherFor !== key) {
+        D.weather = null;
         emit("weather");
       }
-      if (!weatherRetry) weatherRetry = setTimeout(() => {
-        weatherRetry = 0;
-        loadWeather();
-      }, 2 * 6e4);
-    }
+      if (cached3 && cached3.key === key && !D.weather) {
+        D.weather = cached3.data;
+        weatherFor = key;
+        emit("weather");
+      }
+      if (!force && cached3 && cached3.key === key && Date.now() - cached3.at < 14 * 6e4) return;
+      if (!anyNeeds("weather")) return;
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,is_day&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,daylight_duration,uv_index_max&timezone=auto&forecast_days=7`;
+        const ctl = new AbortController();
+        setTimeout(() => ctl.abort(), 8e3);
+        const r = yield safeFetch(url, { signal: ctl.signal });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const data = yield r.json();
+        if (!data || !data.current) throw new Error("no forecast");
+        if (weatherKey() !== key) return;
+        store.set("wx", { key, at: Date.now(), data });
+        D.weather = data;
+        weatherFor = key;
+        emit("weather");
+      } catch (_) {
+        if (!D.weather) {
+          D.weather = false;
+          emit("weather");
+        }
+        if (!weatherRetry) weatherRetry = setTimeout(() => {
+          weatherRetry = 0;
+          loadWeather();
+        }, 2 * 6e4);
+      }
+    });
   }
   function wxLines() {
     var _a;
@@ -6264,19 +6306,21 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     el.replaceChildren(...kids);
     while (el.scrollWidth > el.clientWidth + 1 && el.querySelector(".qm")) [...el.querySelectorAll(".qm")].pop().remove();
   }
-  async function runShortcut(btn, id) {
-    haptic();
-    btn.classList.remove("ok", "err");
-    btn.classList.add("busy");
-    let ok = false;
-    try {
-      await api("/run/" + encodeURIComponent(id), "POST", 5e3);
-      ok = true;
-    } catch (_) {
-    }
-    btn.classList.remove("busy");
-    btn.classList.add(ok ? "ok" : "err");
-    setTimeout(() => btn.classList.remove("ok", "err"), 900);
+  function runShortcut(btn, id) {
+    return __async(this, null, function* () {
+      haptic();
+      btn.classList.remove("ok", "err");
+      btn.classList.add("busy");
+      let ok = false;
+      try {
+        yield api("/run/" + encodeURIComponent(id), "POST", 5e3);
+        ok = true;
+      } catch (_) {
+      }
+      btn.classList.remove("busy");
+      btn.classList.add(ok ? "ok" : "err");
+      setTimeout(() => btn.classList.remove("ok", "err"), 900);
+    });
   }
   function keyButton(s) {
     const icon2 = h("span", "k-icon", s.icon || "\u2022");
@@ -6496,15 +6540,17 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     if (backdrop) backdrop.click();
     return !!backdrop;
   }
-  async function loadSheet() {
-    if (!sheet) return;
-    try {
-      const d = await api("/procs/detail?name=" + encodeURIComponent(sheet.group.name));
-      if (!sheet || d.name !== sheet.group.name) return;
-      sheet.detail = d;
-      renderSheet();
-    } catch (_) {
-    }
+  function loadSheet() {
+    return __async(this, null, function* () {
+      if (!sheet) return;
+      try {
+        const d = yield api("/procs/detail?name=" + encodeURIComponent(sheet.group.name));
+        if (!sheet || d.name !== sheet.group.name) return;
+        sheet.detail = d;
+        renderSheet();
+      } catch (_) {
+      }
+    });
   }
   function renderSheet() {
     const d = sheet.detail, canKill = sheet.canKill;
@@ -6539,27 +6585,31 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       ));
     }
   }
-  async function postKill(query) {
-    const r = await fetch(`${API}/procs/kill?${query}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
-    return { ok: r.ok, body: await r.json().catch(() => ({})) };
+  function postKill(query) {
+    return __async(this, null, function* () {
+      const r = yield fetch(`${API}/procs/kill?${query}`, { method: "POST", cache: "no-store", headers: PANEL_HEADERS });
+      return { ok: r.ok, body: yield r.json().catch(() => ({})) };
+    });
   }
-  async function killInstance(i, label) {
-    try {
-      const { ok, body } = await postKill("pid=" + i.pid);
-      ok ? toast(t("panel.endedPid", { label, pid: i.pid }), "ok") : toast(body.error || t("panel.couldNotEnd"), "err");
-    } catch (_) {
-      toast(t("panel.pcUnreachable"), "err");
-    }
-    setTimeout(() => {
-      loadSheet();
-      loadProcs();
-    }, 500);
+  function killInstance(i, label) {
+    return __async(this, null, function* () {
+      try {
+        const { ok, body } = yield postKill("pid=" + i.pid);
+        ok ? toast(t("panel.endedPid", { label, pid: i.pid }), "ok") : toast(body.error || t("panel.couldNotEnd"), "err");
+      } catch (_) {
+        toast(t("panel.pcUnreachable"), "err");
+      }
+      setTimeout(() => {
+        loadSheet();
+        loadProcs();
+      }, 500);
+    });
   }
-  armButton($("psAll"), t("panel.tapToConfirm"), async () => {
+  armButton($("psAll"), t("panel.tapToConfirm"), () => __async(void 0, null, function* () {
     const g = sheet == null ? void 0 : sheet.group;
     if (!g) return;
     try {
-      const { ok, body } = await postKill("name=" + encodeURIComponent(g.name));
+      const { ok, body } = yield postKill("name=" + encodeURIComponent(g.name));
       if (ok) {
         toast(t("panel.endedGroup", { killed: body.killed, title: g.title }) + (body.failed ? t("panel.failedCount", { n: body.failed }) : ""), "ok");
         closeSheet();
@@ -6568,7 +6618,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
       toast(t("panel.pcUnreachable"), "err");
     }
     setTimeout(loadProcs, 500);
-  });
+  }));
   $("psClose").addEventListener("click", () => {
     haptic();
     closeSheet();
@@ -6627,19 +6677,21 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     return items.filter((x) => !answered.has(x.id));
   }
   var approvalBusy = false;
-  async function loadApprovals() {
-    if (PREVIEW || approvalBusy) return;
-    approvalBusy = true;
-    try {
-      approvals = stillOpen((await api("/approvals", "GET", 8e3)).items || []);
-    } catch (e) {
-      const msg = e && e.message || String(e);
-      if (!/abort|timeout/i.test(msg)) console.warn("approvals: list request failed:", msg);
-      return;
-    } finally {
-      approvalBusy = false;
-    }
-    renderApproval();
+  function loadApprovals() {
+    return __async(this, null, function* () {
+      if (PREVIEW || approvalBusy) return;
+      approvalBusy = true;
+      try {
+        approvals = stillOpen((yield api("/approvals", "GET", 8e3)).items || []);
+      } catch (e) {
+        const msg = e && e.message || String(e);
+        if (!/abort|timeout/i.test(msg)) console.warn("approvals: list request failed:", msg);
+        return;
+      } finally {
+        approvalBusy = false;
+      }
+      renderApproval();
+    });
   }
   function renderApproval() {
     const a = approvals[0];
@@ -6687,33 +6739,35 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
   setInterval(() => {
     if (!PREVIEW && !document.hidden) loadApprovals();
   }, 5e3);
-  async function decide(decision) {
-    const a = approvals[0];
-    if (!a || submitting.has(a.id)) return;
-    haptic();
-    submitting.add(a.id);
-    $("apAllow").disabled = $("apDeny").disabled = $("apSkip").disabled = true;
-    let accepted = false;
-    try {
-      await api(`/approvals/${encodeURIComponent(a.id)}?decision=${decision}`, "POST", 4e3);
-      accepted = true;
-      if (decision === "skip") toast(t("panel.questionWaiting"), "warn");
-      else toast(t(decision === "allow" ? "panel.allowedTool" : "panel.deniedTool", { tool: a.tool }), decision === "allow" ? "ok" : "err");
-    } catch (_) {
-      toast(t("panel.alreadyAnswered"), "warn");
-    } finally {
-      submitting.delete(a.id);
-    }
-    if (!accepted) {
-      if (approvals[0] && approvals[0].id === a.id) {
-        $("apAllow").disabled = $("apDeny").disabled = $("apSkip").disabled = false;
+  function decide(decision) {
+    return __async(this, null, function* () {
+      const a = approvals[0];
+      if (!a || submitting.has(a.id)) return;
+      haptic();
+      submitting.add(a.id);
+      $("apAllow").disabled = $("apDeny").disabled = $("apSkip").disabled = true;
+      let accepted = false;
+      try {
+        yield api(`/approvals/${encodeURIComponent(a.id)}?decision=${decision}`, "POST", 4e3);
+        accepted = true;
+        if (decision === "skip") toast(t("panel.questionWaiting"), "warn");
+        else toast(t(decision === "allow" ? "panel.allowedTool" : "panel.deniedTool", { tool: a.tool }), decision === "allow" ? "ok" : "err");
+      } catch (_) {
+        toast(t("panel.alreadyAnswered"), "warn");
+      } finally {
+        submitting.delete(a.id);
       }
-      return;
-    }
-    answered.add(a.id);
-    if (answered.size > answeredCap) answered.delete(answered.values().next().value);
-    approvals = approvals.filter((x) => x.id !== a.id);
-    renderApproval();
+      if (!accepted) {
+        if (approvals[0] && approvals[0].id === a.id) {
+          $("apAllow").disabled = $("apDeny").disabled = $("apSkip").disabled = false;
+        }
+        return;
+      }
+      answered.add(a.id);
+      if (answered.size > answeredCap) answered.delete(answered.values().next().value);
+      approvals = approvals.filter((x) => x.id !== a.id);
+      renderApproval();
+    });
   }
   $("apAllow").addEventListener("click", () => decide("allow"));
   $("apDeny").addEventListener("click", () => decide("deny"));
@@ -7271,18 +7325,20 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     }
     $("nvNum").textContent = Math.max(1, Math.ceil((navCount.until - Date.now()) / 1e3));
   }
-  async function toggleRulesPause() {
-    haptic();
-    const paused = rulesPaused && rulesPaused > Date.now();
-    try {
-      const r = await api(`/rules/pause?minutes=${paused ? 0 : 60}`, "POST", 4e3);
-      rulesPaused = r.pausedUntil || null;
-      if (!rulesPaused) navQueue = navQueue.filter((x) => x.kind === "home");
-      toast(rulesPaused ? t("panel.rulesPausedToast") : t("panel.rulesResumedToast"), "ok");
-    } catch (_) {
-      toast(t("panel.pcNoAnswer"), "warn");
-    }
-    renderRulesBtn();
+  function toggleRulesPause() {
+    return __async(this, null, function* () {
+      haptic();
+      const paused = rulesPaused && rulesPaused > Date.now();
+      try {
+        const r = yield api(`/rules/pause?minutes=${paused ? 0 : 60}`, "POST", 4e3);
+        rulesPaused = r.pausedUntil || null;
+        if (!rulesPaused) navQueue = navQueue.filter((x) => x.kind === "home");
+        toast(rulesPaused ? t("panel.rulesPausedToast") : t("panel.rulesResumedToast"), "ok");
+      } catch (_) {
+        toast(t("panel.pcNoAnswer"), "warn");
+      }
+      renderRulesBtn();
+    });
   }
   function renderRulesBtn() {
     const b = $("ovRules");
@@ -7673,68 +7729,80 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     }
     applyBrightness(true);
   }
-  async function loadConfig() {
-    if (PREVIEW) return;
-    try {
-      const r = await api("/config");
-      const before = JSON.stringify(cfg);
-      cfg = __spreadValues(__spreadValues({}, DEFAULT_CFG), r.config);
-      cfgVersion = r.version;
-      if (JSON.stringify(cfg) !== before) {
-        store.set("cfg", cfg);
-        buildLayout();
-        applyDisplay();
-        loadWeather();
+  function loadConfig() {
+    return __async(this, null, function* () {
+      if (PREVIEW) return;
+      try {
+        const r = yield api("/config");
+        const before = JSON.stringify(cfg);
+        cfg = __spreadValues(__spreadValues({}, DEFAULT_CFG), r.config);
+        cfgVersion = r.version;
+        if (JSON.stringify(cfg) !== before) {
+          store.set("cfg", cfg);
+          buildLayout();
+          applyDisplay();
+          loadWeather();
+        }
+      } catch (_) {
       }
-    } catch (_) {
-    }
+    });
   }
   var localDay = (ms) => {
     const d = new Date(ms);
     return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime();
   };
-  async function loadCalendar() {
-    try {
-      const cal = await api("/calendar");
-      cal.events = (cal.events || []).map((e) => e.allDay ? __spreadProps(__spreadValues({}, e), { start: localDay(e.start), end: localDay(e.end) }) : e).sort((a, b) => a.start - b.start);
-      D.calendar = cal;
-      emit("calendar");
-    } catch (_) {
-    }
+  function loadCalendar() {
+    return __async(this, null, function* () {
+      try {
+        const cal = yield api("/calendar");
+        cal.events = (cal.events || []).map((e) => e.allDay ? __spreadProps(__spreadValues({}, e), { start: localDay(e.start), end: localDay(e.end) }) : e).sort((a, b) => a.start - b.start);
+        D.calendar = cal;
+        emit("calendar");
+      } catch (_) {
+      }
+    });
   }
-  async function loadQuotas() {
-    try {
-      D.quotas = await api("/quotas");
-      emit("quotas");
-    } catch (_) {
-    }
+  function loadQuotas() {
+    return __async(this, null, function* () {
+      try {
+        D.quotas = yield api("/quotas");
+        emit("quotas");
+      } catch (_) {
+      }
+    });
   }
   function applyWork(w) {
     D.work = w;
     notifyTransitions(w.sessions || []);
     emit("work");
   }
-  async function loadWork() {
-    try {
-      applyWork(await api("/work"));
-    } catch (_) {
-    }
+  function loadWork() {
+    return __async(this, null, function* () {
+      try {
+        applyWork(yield api("/work"));
+      } catch (_) {
+      }
+    });
   }
-  async function loadProcs() {
-    try {
-      D.procs = await api("/procs?top=150");
-      emit("procs");
-    } catch (_) {
-    }
+  function loadProcs() {
+    return __async(this, null, function* () {
+      try {
+        D.procs = yield api("/procs?top=150");
+        emit("procs");
+      } catch (_) {
+      }
+    });
   }
-  async function loadPush() {
-    try {
-      const r = await api("/push");
-      D.push = r.items || {};
-      pushVersion = r.version;
-      emit("push");
-    } catch (_) {
-    }
+  function loadPush() {
+    return __async(this, null, function* () {
+      try {
+        const r = yield api("/push");
+        D.push = r.items || {};
+        pushVersion = r.version;
+        emit("push");
+      } catch (_) {
+      }
+    });
   }
   function setOnline(on) {
     document.body.classList.toggle("offline", !on);
@@ -7828,21 +7896,23 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
     }
   };
   var streaming = () => streamOn && Date.now() - lastStateAt < 3e3;
-  async function poll() {
-    if (!streaming() || evReplay) {
-      const replay = evReplay, gen = evGen;
-      try {
-        const s = await api("/state" + (replay ? "?ev=0" : evSeq != null ? "?ev=" + evSeq : ""));
-        if (applyState(s, replay ? gen : null) && replay && gen === evGen) {
-          evReplay = s.evSeq != null && s.evSeq < evDrop;
-          evDrop = 0;
-          if (!evReplay) evDrain();
+  function poll() {
+    return __async(this, null, function* () {
+      if (!streaming() || evReplay) {
+        const replay = evReplay, gen = evGen;
+        try {
+          const s = yield api("/state" + (replay ? "?ev=0" : evSeq != null ? "?ev=" + evSeq : ""));
+          if (applyState(s, replay ? gen : null) && replay && gen === evGen) {
+            evReplay = s.evSeq != null && s.evSeq < evDrop;
+            evDrop = 0;
+            if (!evReplay) evDrain();
+          }
+        } catch (_) {
+          if (!streaming()) setOnline(false);
         }
-      } catch (_) {
-        if (!streaming()) setOnline(false);
       }
-    }
-    setTimeout(poll, 1e3);
+      setTimeout(poll, 1e3);
+    });
   }
   buildLayout();
   applyDisplay();

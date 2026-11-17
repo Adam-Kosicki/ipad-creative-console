@@ -23,7 +23,7 @@ const src = path.join(repo, 'android/app/src/main/assets/www');
 const out = path.join(here, '..', 'bridge', 'panel');
 // es2017, not 'safari10': esbuild refuses const for Safari 10 (an old loop-scoping bug), but the panel never hits it.
 // es2017 still lowers ?., ??, object spread, regex flags and the rest that Safari 10.1 lacks.
-const TARGET = 'es2017';
+const TARGET = 'es2016'; // es2016: async/await becomes generators (Safari 10 crashes on async arrow functions)
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
