@@ -26,8 +26,8 @@ So errors on the iPad can be read and fixed from the PC (or by Claude) without p
 On the iPad page, `__dbg.tap('#selector')`, `__dbg.tap(x, y)` and `__dbg.swipe(x1, y1, x2, y2)` press things without a finger.
 
 ## Screenshots over USB
-Needs the iPad on USB, trusted, Apple Mobile Device Support (iTunes) and `pymobiledevice3`.
-Default command: `pymobiledevice3 developer dvt screenshot "{out}"`. Override with `DEBUG_SCREENSHOT_CMD` (use `{out}` for the file path).
+Needs the iPad on USB and trusted, Apple's USB driver (install iTunes or the Apple Devices app), and `pymobiledevice3` (`pip install --user pymobiledevice3`). First time: `python -m pymobiledevice3 mounter auto-mount`.
+Without `DEBUG_SCREENSHOT_CMD` the proxy tries `pymobiledevice3 developer screenshot` (also via Python 3.11 / `py` / `python -m`). Set `DEBUG_SCREENSHOT_CMD` (with `{out}` for the file path) to force one.
 
 ## Safety
 The proxy answers home-network addresses only. iPad-side calls need no key (like the panel itself); control calls need the key, because eval can press Allow on Claude prompts.

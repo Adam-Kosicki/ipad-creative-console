@@ -105,13 +105,24 @@ function proxy(req, res) {
 function screenshot(res) {
   var out = path.join(DIR, 'screen.png');
   try { fs.unlinkSync(out); } catch (_) {}
-  var cmd = (process.env.DEBUG_SCREENSHOT_CMD || 'pymobiledevice3 developer dvt screenshot "{out}"').replace('{out}', out);
-  cp.exec(cmd, { timeout: 30000, windowsHide: true }, function (err, stdout, stderr) {
-    fs.readFile(out, function (e2, png) {
-      if (e2) return json(res, 500, { error: 'screenshot failed', cmd: cmd, detail: String(stderr || stdout || (err && err.message) || '').slice(-2000) });
-      send(res, 200, 'image/png', png);
+  // pymobiledevice3 is often installed with pip --user, off PATH; try the usual ways to start it
+  var py = path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'python.exe');
+  var cmds = process.env.DEBUG_SCREENSHOT_CMD ? [process.env.DEBUG_SCREENSHOT_CMD] : [
+    'pymobiledevice3 developer screenshot "{out}"', '"' + py + '" -m pymobiledevice3 developer screenshot "{out}"',
+    'py -m pymobiledevice3 developer screenshot "{out}"', 'python -m pymobiledevice3 developer screenshot "{out}"',
+    'pymobiledevice3 developer dvt screenshot "{out}"'];
+  var errors = [];
+  (function next(i) {
+    if (i >= cmds.length) return json(res, 500, { error: 'screenshot failed (iPad on USB, trusted, Apple driver installed?)', tried: errors });
+    var cmd = cmds[i].replace('{out}', out);
+    cp.exec(cmd, { timeout: 30000, windowsHide: true }, function (err, stdout, stderr) {
+      fs.readFile(out, function (e2, png) {
+        if (!e2) return send(res, 200, 'image/png', png);
+        errors.push({ cmd: cmd, detail: String(stderr || stdout || (err && err.message) || '').slice(-600) });
+        next(i + 1);
+      });
     });
-  });
+  })(0);
 }
 
 var PAGE = '<!doctype html><meta charset=utf-8><title>iPad debug</title><style>body{font:13px monospace;margin:0;background:#111;color:#ddd}' +
@@ -177,6 +188,7 @@ http.createServer(function (req, res) {
 }).listen(PORT, '0.0.0.0', function () {
   var ips = [], nets = os.networkInterfaces();
   for (var n in nets) nets[n].forEach(function (a) { if (a.family === 'IPv4' && !a.internal) ips.push(a.address); });
+  ips.sort(function (a, b) { return (b.indexOf('192.168.') === 0) - (a.indexOf('192.168.') === 0); });
   console.log('iPad debug proxy. On the iPad open:  http://' + (ips[0] || '<pc-ip>') + ':' + PORT);
   console.log('Debug console on this PC:           http://localhost:' + PORT + '/__dbg/?k=' + KEY);
 });
