@@ -1,2 +1,4 @@
 node_modules
 bridge/.token
+bridge/.debug/
+bridge/.debug-key

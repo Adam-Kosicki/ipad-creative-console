@@ -12,6 +12,7 @@ Turn old devices into desk panels: an iPad 4 (model A1458, iOS 10.3.3) first, a 
 1. **iPad macros**: [docs/runbook-ipad.md](docs/runbook-ipad.md)
 2. **iPad Claude allow/deny + quotas**: [docs/runbook-claude-bridge.md](docs/runbook-claude-bridge.md)
    - **Full PhoneBox panel on the iPad**: [docs/runbook-phonebox-panel.md](docs/runbook-phonebox-panel.md)
+   - **Debug the iPad remotely**: [docs/runbook-ipad-debug.md](docs/runbook-ipad-debug.md)
 3. **Galaxy S9**: [docs/s9-later.md](docs/s9-later.md)
 
 ## Status
