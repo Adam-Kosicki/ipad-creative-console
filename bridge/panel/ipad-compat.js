@@ -322,10 +322,20 @@
     var ch = function (i) { return Math.round((a[i] * a[3] * p + b[i] * b[3] * (1 - p)) / al); };
     return 'rgba(' + ch(0) + ', ' + ch(1) + ', ' + ch(2) + ', ' + Math.round(al * 1000) / 1000 + ')';
   };
-  var paintColors = function () {
+  // elements of `root` (itself and descendants) matching a selector; root = document means everything
+  var within = function (root, selector) {
+    var out = [];
+    try {
+      if (root.nodeType === 1 && root.matches(selector)) out.push(root);
+      var q = root.querySelectorAll(selector);
+      for (var i = 0; i < q.length; i++) out.push(q[i]);
+    } catch (_) {}
+    return out;
+  };
+  var paintColors = function (root) {
+    root = root || document;
     for (var k = 0; k < COLORS.length; k++) {
-      var e = COLORS[k], els;
-      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      var e = COLORS[k], els = within(root, e[0]);
       for (var i = 0; i < els.length; i++) {
         var el = els[i], cs = w.getComputedStyle(el);
         var a = parseColor(resolve(e[1], cs, 0)), b = parseColor(resolve(e[3], cs, 0));
@@ -336,10 +346,10 @@
     }
   };
   // ---- aspect-ratio ----
-  var fixAspect = function () {
+  var fixAspect = function (root) {
+    root = root || document;
     for (var k = 0; k < ASPECT.length; k++) {
-      var e = ASPECT[k], els;
-      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      var e = ASPECT[k], els = within(root, e[0]);
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
         if (e[2] === 'width') { var h = el.offsetHeight; if (h > 0) el.style.width = Math.round(h * e[1]) + 'px'; }
@@ -415,10 +425,21 @@
       sizeWrapper(b, span);
     }
   };
-  var later = 0;
+  // Full pass: resize, rotation and every 15 s. Cheap pass (flush): only the nodes that were just added, so a list that
+  // re-renders every few seconds (sessions, processes) does not re-measure the whole page each time.
+  var later = 0, pending = [], pendingTimer = 0;
   var refresh = function () {
     if (later) return;
     later = setTimeout(function () { later = 0; wrapButtons(document.body); resizeWrappers(); measure(); paintColors(); fixAspect(); }, 80);
+  };
+  var flush = function () {
+    pendingTimer = 0;
+    var nodes = pending; pending = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (!n.parentNode) continue;
+      wrapButtons(n); paintColors(n); fixAspect(n);
+    }
   };
   w.__pbRefresh = refresh;
 
@@ -439,13 +460,14 @@
     // ticking add no elements and are ignored)
     if (w.MutationObserver) new MutationObserver(function (list) {
       for (var i = 0; i < list.length; i++) {
-        var nodes = list[i].addedNodes;
-        if (!nodes.length) continue;
+        var tg = list[i].target, nodes = list[i].addedNodes;
+        if (!nodes.length || tg.__pbw || (tg.className === 'pb-bw')) continue;   // our own button wrapping
         if (sel) measureNew(nodes);
-        for (var j = 0; j < nodes.length; j++) if (nodes[j].nodeType === 1) { refresh(); break; }
+        for (var j = 0; j < nodes.length; j++) if (nodes[j].nodeType === 1 && nodes[j].className !== 'pb-bw') pending.push(nodes[j]);
       }
+      if (pending.length && !pendingTimer) pendingTimer = setTimeout(flush, 80);
     }).observe(document.body, { childList: true, subtree: true });
     setInterval(refresh, 15000);
-    setInterval(function () { wrapButtons(document.body); }, 1500);   // rebuilt lists (sessions...) get wrapped again
+    setInterval(function () { wrapButtons(document.body); }, 4000);   // rebuilt lists (sessions...) get wrapped again
   });
 })();
