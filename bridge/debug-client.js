@@ -71,22 +71,41 @@
     e.initMouseEvent(type, true, true, window, 1, x, y, x, y, false, false, false, false, 0, null);
     (el || document.elementFromPoint(x, y) || document.body).dispatchEvent(e);
   }
+  // iOS Safari: real TouchEvents from document.createTouch; elsewhere fall back to mouse events.
+  function touch(type, x, y, el) {
+    el = el || document.elementFromPoint(x, y) || document.body;
+    if (!document.createTouch) return mouse({ touchstart: 'mousedown', touchmove: 'mousemove', touchend: 'mouseup' }[type], x, y, el);
+    var t = document.createTouch(window, el, 1, x + window.pageXOffset, y + window.pageYOffset, x, y);
+    var list = type === 'touchend' ? document.createTouchList() : document.createTouchList(t);
+    var e = document.createEvent('TouchEvent');
+    e.initTouchEvent(type, true, true, window, 0, x, y, x, y, false, false, false, false, list, list, document.createTouchList(t), 1, 0);
+    el.dispatchEvent(e);
+  }
   var api = {
     id: id,
     tap: function (target, y) {
       var p, el;
       if (typeof target === 'number') { p = { x: target, y: y }; el = document.elementFromPoint(p.x, p.y); }
       else { el = at(target); p = center(el); }
+      touch('touchstart', p.x, p.y, el); touch('touchend', p.x, p.y, el);
       mouse('mousedown', p.x, p.y, el); mouse('mouseup', p.x, p.y, el); mouse('click', p.x, p.y, el);
       return str(el);
     },
-    swipe: function (x1, y1, x2, y2, steps) {
-      steps = steps || 8;
-      var el = document.elementFromPoint(x1, y1);
-      mouse('mousedown', x1, y1, el);
-      for (var i = 1; i <= steps; i++) mouse('mousemove', x1 + (x2 - x1) * i / steps, y1 + (y2 - y1) * i / steps);
-      mouse('mouseup', x2, y2);
-      return str(el);
+    // A finger swipe over `ms` milliseconds (default 250), so momentum code sees real speeds. Resolves when done.
+    swipe: function (x1, y1, x2, y2, ms, steps) {
+      ms = ms || 250; steps = steps || 12;
+      var el = document.elementFromPoint(x1, y1), i = 0;
+      touch('touchstart', x1, y1, el);
+      return new Promise(function (resolve) {
+        (function step() {
+          i++;
+          var x = x1 + (x2 - x1) * i / steps, y = y1 + (y2 - y1) * i / steps;
+          touch('touchmove', x, y, el);
+          if (i < steps) return setTimeout(step, ms / steps);
+          touch('touchend', x2, y2, el);
+          resolve(str(el));
+        })();
+      });
     },
     // What is on screen, as text: visible elements with their boxes. Cheap enough to send each time.
     outline: function (root, max) {

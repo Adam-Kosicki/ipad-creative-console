@@ -23,7 +23,7 @@ So errors on the iPad can be read and fixed from the PC (or by Claude) without p
 | `GET /__dbg/snapshot` | full DOM + viewport (also saved to `bridge/.debug/snapshot.json`) |
 | `GET /__dbg/screenshot` | real screenshot over USB (PNG), see below |
 
-On the iPad page, `__dbg.tap('#selector')`, `__dbg.tap(x, y)` and `__dbg.swipe(x1, y1, x2, y2)` press things without a finger.
+On the iPad page, `__dbg.tap('#selector')`, `__dbg.tap(x, y)` and `__dbg.swipe(x1, y1, x2, y2, ms)` press and swipe without a finger (real touch events on iOS).
 
 ## Screenshots over USB
 Needs the iPad on USB and trusted, Apple's USB driver (install iTunes or the Apple Devices app), and `pymobiledevice3` (`pip install --user pymobiledevice3`). First time: `python -m pymobiledevice3 mounter auto-mount`.
