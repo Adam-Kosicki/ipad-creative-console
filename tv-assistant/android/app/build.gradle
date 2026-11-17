@@ -1,4 +1,7 @@
-plugins { id "com.android.application" }
+plugins {
+    id "com.android.application"
+    id "com.chaquo.python"
+}
 
 android {
     namespace "com.adamk.tvassistant"
@@ -24,6 +27,18 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     lint { abortOnError false; checkReleaseBuilds false }
+}
+
+// Embedded Python runs Meta's Muse gadget SDK on the TV (src/main/python).
+chaquopy {
+    defaultConfig {
+        version "3.11"
+        pip {
+            install "cryptography"
+            install "websockets==13.1"
+            install "certifi"
+        }
+    }
 }
 
 dependencies {

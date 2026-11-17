@@ -62,6 +62,10 @@ public class MainActivity extends Activity {
         LinearLayout buttons = new LinearLayout(this);
         buttons.setGravity(Gravity.START);
         buttons.setPadding(0, 30, 0, 0);
+        buttons.addView(button("Pair with Muse", v -> new Thread(() -> {
+            Muse.init(this, t -> { });
+            Muse.pair();
+        }).start()));
         buttons.addView(button("Talk now", v -> startService(new Intent(this, AssistantService.class)
                 .setAction(AssistantService.ACTION_TALK))));
         buttons.addView(button(prefs.wakeEnabled() ? "Wake word: on" : "Wake word: off", v -> {
@@ -97,7 +101,16 @@ public class MainActivity extends Activity {
         Float threshold = i.hasExtra("threshold") ? i.getFloatExtra("threshold", 0.5f) : null;
         Boolean wake = i.hasExtra("wake") ? i.getBooleanExtra("wake", true) : null;
         prefs.set(i.getStringExtra("bridge"), i.getStringExtra("token"), threshold, wake);
+        String sdkToken = i.getStringExtra("sdk_token");
+        if (sdkToken != null) {
+            new Thread(() -> {
+                Muse.init(this, t -> { });
+                pendingNote = "SDK token: " + Muse.saveSdkToken(sdkToken);
+            }).start();
+        }
     }
+
+    private volatile String pendingNote = "";
 
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
@@ -107,13 +120,34 @@ public class MainActivity extends Activity {
     private final Runnable refresh = new Runnable() {
         @Override
         public void run() {
-            String bridge = prefs.bridge().isEmpty() ? "(not set)" : prefs.bridge();
+            String museLine;
+            if (!prefs.bridge().isEmpty()) {
+                museLine = "Muse via Pi " + prefs.bridge() + ": " + AssistantService.bridgeStatus;
+            } else if (!Muse.ready()) {
+                museLine = "Muse: starting…";
+            } else {
+                org.json.JSONObject m = Muse.status();
+                String pairing = m.optString("pairing");
+                if ("open".equals(pairing)) {
+                    museLine = "Muse: PAIRING. In the Muse app: Settings > Devices > Add Device, pick "
+                            + m.optString("ble_name");
+                } else if (m.optBoolean("connected")) {
+                    museLine = "Muse: connected ✓ (" + m.optString("ble_name") + ")";
+                } else if (m.optBoolean("paired")) {
+                    museLine = "Muse: paired, connecting…";
+                } else {
+                    museLine = "Muse: not paired" + (m.optBoolean("has_token") ? " (press Pair with Muse)" : " (needs the SDK token)")
+                            + (pairing.isEmpty() ? "" : " · last try: " + pairing);
+                }
+                if (!m.optString("error").isEmpty()) museLine += "\nPairing problem: " + m.optString("error");
+            }
             status.setText(String.format(Locale.US,
-                    "State: %s\nPi bridge: %s — %s\nPop-ups allowed: %s\nLast reply: %s\n%s",
-                    AssistantService.state, bridge, AssistantService.bridgeStatus,
+                    "State: %s\n%s\nBluetooth: %s\nPop-ups allowed: %s\nLast reply: %s\n%s%s",
+                    AssistantService.state, museLine, BlePeripheral.support(MainActivity.this),
                     Settings.canDrawOverlays(MainActivity.this) ? "yes" : "no",
                     AssistantService.lastReply.isEmpty() ? "—" : AssistantService.lastReply,
-                    AssistantService.lastError.isEmpty() ? "" : "Problem: " + AssistantService.lastError));
+                    AssistantService.lastError.isEmpty() ? "" : "Problem: " + AssistantService.lastError,
+                    pendingNote.isEmpty() ? "" : "\n" + pendingNote));
             meter.setProgress((int) Math.min(100, AssistantService.level / 30));
             scoreBar.setProgress((int) (AssistantService.peakScore * 100));
             handler.postDelayed(this, 150);

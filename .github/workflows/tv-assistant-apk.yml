@@ -3,7 +3,7 @@ name: TV Assistant APK
 on:
   push:
     paths:
-      - "tv-assistant/android/**"
+      - "tv-assistant/**"
       - ".github/workflows/tv-assistant-apk.yml"
   workflow_dispatch:
 
@@ -19,6 +19,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Python tests (TV gadget and Pi bridge)
+        run: |
+          pip install cryptography "websockets==13.1" certifi pytest
+          python -m pytest -q tv-assistant/android/python-tests
+          PYTHONPATH=tv-assistant/android/app/src/main/python python -m pytest -q tv-assistant/pi-bridge/tests
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"

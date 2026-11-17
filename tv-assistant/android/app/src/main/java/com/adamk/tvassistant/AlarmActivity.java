@@ -42,6 +42,9 @@ public class AlarmActivity extends Activity {
         current = this;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         label = getIntent().getStringExtra("label");
+        String timerId = getIntent().getStringExtra("timer_id");
+        if (timerId != null) new Timers(this).remove(timerId);
+        if (AssistantService.running) AssistantService.state = AssistantService.State.ALARM;
         boolean isAlarm = "alarm".equals(getIntent().getStringExtra("kind"));
         String title = isAlarm ? "Alarm" : "Timer done";
 

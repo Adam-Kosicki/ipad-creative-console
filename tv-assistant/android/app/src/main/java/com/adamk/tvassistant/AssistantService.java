@@ -83,6 +83,14 @@ public class AssistantService extends Service {
             if (ttsReady) tts.setLanguage(Locale.US);
         });
         running = true;
+        new Thread(() -> {
+            try {
+                Muse.init(this, this::announce);
+            } catch (Throwable t) {
+                Log.e(TAG, "Muse link failed to start", t);
+                lastError = "Muse link: " + t.getMessage();
+            }
+        }, "muse-init").start();
         micThread = new Thread(this::micLoop, "mic");
         micThread.start();
         eventThread = new Thread(this::eventLoop, "events");
@@ -236,12 +244,17 @@ public class AssistantService extends Service {
 
     private void ask(byte[] wav) {
         BridgeClient bridge = new BridgeClient(prefs.bridge(), prefs.token());
+        boolean usePi = !prefs.bridge().isEmpty();
         try {
-            if (!bridge.configured()) {
-                say("I'm not connected to the Pi yet. Open TV Assistant to set it up.");
+            JSONObject r;
+            if (usePi) {
+                r = bridge.ask(wav);
+            } else if (Muse.ready()) {
+                r = Muse.ask(wav); // the TV itself is the Muse device
+            } else {
+                say("I'm still starting up. Try again in a moment.");
                 return;
             }
-            JSONObject r = bridge.ask(wav);
             if (!r.optBoolean("ok")) {
                 lastError = r.optString("error", "unknown error");
                 say(lastError);
@@ -253,16 +266,24 @@ public class AssistantService extends Service {
             state = State.SPEAKING;
             overlay.show(text, 0);
             JSONArray audioUrls = r.optJSONArray("audio");
+            JSONArray audioFiles = r.optJSONArray("audio_files");
             boolean played = false;
             if (audioUrls != null) {
                 for (int i = 0; i < audioUrls.length(); i++) played |= playUrl(bridge, audioUrls.getString(i));
+            }
+            if (audioFiles != null) {
+                for (int i = 0; i < audioFiles.length(); i++) {
+                    java.io.File f = new java.io.File(audioFiles.getString(i));
+                    played |= playFile(f);
+                    f.delete();
+                }
             }
             if (!played) speakAndWait(text);
             overlay.show(text, 4000);
         } catch (Exception e) {
             Log.e(TAG, "ask failed", e);
-            lastError = "Can't reach the Pi: " + e.getMessage();
-            say("I can't reach the Pi right now.");
+            lastError = (usePi ? "Can't reach the Pi: " : "Muse: ") + e.getMessage();
+            say(usePi ? "I can't reach the Pi right now." : "Something went wrong talking to Muse.");
         } finally {
             finishTurn();
         }
@@ -273,6 +294,40 @@ public class AssistantService extends Service {
         overlay.show(text, 5000);
         beep(ToneGenerator.TONE_PROP_NACK);
         speakAndWait(text);
+    }
+
+    private boolean playFile(java.io.File file) {
+        CountDownLatch done = new CountDownLatch(1);
+        MediaPlayer mp = new MediaPlayer();
+        try {
+            mp.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
+            mp.setDataSource(file.getAbsolutePath());
+            mp.setOnCompletionListener(m -> done.countDown());
+            mp.setOnErrorListener((m, what, extra) -> { done.countDown(); return true; });
+            mp.prepare();
+            mp.start();
+            done.await(120, TimeUnit.SECONDS);
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "could not play Muse's voice, using the TV's", e);
+            return false;
+        } finally {
+            mp.release();
+        }
+    }
+
+    /** Muse (tv.say) or the Pi asked the TV to say something. */
+    void announce(String text) {
+        worker.submit(() -> {
+            State before = state;
+            overlay.show(text, 0);
+            beep(ToneGenerator.TONE_PROP_BEEP);
+            speakAndWait(text);
+            overlay.show(text, 4000);
+            if (state == before) state = State.IDLE;
+        });
     }
 
     private boolean playUrl(BridgeClient bridge, String path) {
@@ -315,7 +370,7 @@ public class AssistantService extends Service {
         long after = -1;
         while (running) {
             BridgeClient bridge = new BridgeClient(prefs.bridge(), prefs.token());
-            if (!bridge.configured()) { bridgeStatus = "not set up"; SystemClock.sleep(3000); continue; }
+            if (!bridge.configured()) { bridgeStatus = "not used (the TV talks to Muse itself)"; SystemClock.sleep(3000); continue; }
             try {
                 if (after < 0) { // skip anything that happened before this app started
                     JSONObject h = bridge.health();
@@ -343,14 +398,7 @@ public class AssistantService extends Service {
         String type = e.optString("type");
         Log.i(TAG, "event " + e);
         if ("say".equals(type)) {
-            worker.submit(() -> {
-                State before = state;
-                overlay.show(e.optString("text"), 0);
-                beep(ToneGenerator.TONE_PROP_BEEP);
-                speakAndWait(e.optString("text"));
-                overlay.show(e.optString("text"), 4000);
-                if (state == before) state = State.IDLE;
-            });
+            announce(e.optString("text"));
         } else if ("alarm".equals(type)) {
             Intent i = new Intent(this, AlarmActivity.class)
                     .putExtra("label", e.optString("label"))
