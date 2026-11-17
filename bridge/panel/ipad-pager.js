@@ -82,6 +82,16 @@
   // ---- the swipe ----
   var NO_SWIPE = 'input, textarea, select, [contenteditable], .s-list, .vb, .radio-carousel-track, .ac-dial, .ps-list';
   var x0 = 0, y0 = 0, start = 0, lock = '', hist = [], tracking = false;
+  // Swipe latency recorder (read with __swipeStats() from /__dbg/eval after swiping by hand): touchmove age when the
+  // handler runs, time spent in the handler, and the gaps between animation frames while a finger is down.
+  var R = { delay: [], hand: [], gaps: [], touching: false, last: 0, until: 0 };
+  (function loop(ts) { if (R.touching || ts < R.until) { if (R.last) R.gaps.push(ts - R.last); R.last = ts; } else R.last = 0; requestAnimationFrame(loop); })(0);
+  function summ(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), t = 0; a.forEach(function (x) { t += x; }); return { n: a.length, avg: Math.round(t / a.length * 10) / 10, p50: Math.round(s[Math.floor(s.length / 2)] * 10) / 10, p95: Math.round(s[Math.floor(s.length * .95)] * 10) / 10, max: Math.round(s[s.length - 1] * 10) / 10 }; }
+  window.__swipeStats = function () { var g = summ(R.gaps.slice(1)); return JSON.stringify({ frameGapMs: g, fps: g ? Math.round(1000 / g.avg * 10) / 10 : null, touchmoveDelayMs: summ(R.delay), handlerMs: summ(R.hand) }); };
+  window.__swipeReset = function () { R.delay = []; R.hand = []; R.gaps = []; return 'reset'; };
+  pager.addEventListener('touchstart', function () { R.touching = true; }, true);
+  pager.addEventListener('touchend', function () { R.touching = false; R.until = performance.now() + 600; }, true);
+  pager.addEventListener('touchcancel', function () { R.touching = false; }, true);
   pager.addEventListener('touchstart', function (e) {
     tracking = false;
     if (e.touches.length !== 1 || count() < 2) return;
@@ -94,6 +104,7 @@
     start = off; lock = ''; hist = [[Date.now(), x0]]; tracking = true;
   }, true);
   pager.addEventListener('touchmove', function (e) {
+    var h0 = performance.now(), age = Date.now() - e.timeStamp; if (age > -1000 && age < 5000) R.delay.push(age);
     if (!tracking) return;
     var x = e.touches[0].clientX, dx = x - x0, dy = e.touches[0].clientY - y0;
     if (!lock) {
@@ -112,7 +123,7 @@
       var kids = pager.children, c = Math.round(start / W());
       for (var i = Math.max(0, c - 1); i <= Math.min(kids.length - 1, c + 1); i++) kids[i].style.visibility = '';
     }
-    off = to; paint(to);
+    off = to; paint(to); R.hand.push(performance.now() - h0);
   }, { passive: false, capture: true });
   function end() {
     if (!tracking) return;

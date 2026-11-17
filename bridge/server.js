@@ -116,6 +116,7 @@ http.createServer(function (req, res) {
     if (setCookie && p === '/panel/') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie['Set-Cookie'] });
     return serveStatic(res, PANEL, decodeURIComponent(p.slice(7)));
   }
+  if (p.indexOf('/bench/') === 0) return serveStatic(res, path.join(__dirname, 'bench'), decodeURIComponent(p.slice(7)));   // swipe benchmark pages
   if (p.indexOf('/agent/') === 0) {
     var ap = p.slice(6);
     if (!allowed(ap, req.method)) return send(res, 403, 'application/json', '{"error":"not allowed from the iPad"}');
