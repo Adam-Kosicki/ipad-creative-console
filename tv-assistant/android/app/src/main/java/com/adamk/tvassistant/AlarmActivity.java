@@ -3,8 +3,6 @@ package com.adamk.tvassistant;
 import android.app.Activity;
 import android.graphics.Color;
 import android.media.AudioAttributes;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
 import android.media.ToneGenerator;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -26,7 +24,6 @@ public class AlarmActivity extends Activity {
     private static AlarmActivity current;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private Ringtone ringtone;
     private ToneGenerator tone;
     private TextToSpeech tts;
     private String label = "";
@@ -78,29 +75,20 @@ public class AlarmActivity extends Activity {
     }
 
     private void startRinging() {
-        Uri uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
-        if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        if (uri != null) ringtone = RingtoneManager.getRingtone(this, uri);
-        if (ringtone != null) {
-            ringtone.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
-            if (android.os.Build.VERSION.SDK_INT >= 28) ringtone.setLooping(true);
-            ringtone.play();
-        }
-        // TVs often ship without alarm sounds, so also beep in a loop.
-        tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
+        // The TV's system alarm sound often fails to play ("delegating to remote player"), so beep ourselves.
+        tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
         beepLoop();
     }
 
     private void beepLoop() {
         if (stopped) return;
-        if (ringtone == null || !ringtone.isPlaying()) tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 600);
+        tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 600);
         handler.postDelayed(this::beepLoop, 1400);
     }
 
     void stop() {
         if (stopped) return;
         stopped = true;
-        if (ringtone != null) ringtone.stop();
         if (tone != null) tone.release();
         if (tts != null) { tts.stop(); tts.shutdown(); }
         AssistantService.alarmEnded();
