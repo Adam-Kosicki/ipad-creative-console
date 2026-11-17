@@ -212,6 +212,10 @@
   var CONTAINERS = /*CONTAINERS*/[];
   // clamp()/min()/max() with plain lengths: [fn, [[number, unit], ...]], set as --pbm<index> in px
   var MATH = /*MATH*/[];
+  // color-mix(in srgb, A p%, B) per rule: [selector, A, p, B], set as --pbc<index> on the matching elements
+  var COLORS = /*COLORS*/[];
+  // aspect-ratio per rule: [selector, ratio, side to set inline]
+  var ASPECT = /*ASPECT*/[];
   var sel = CONTAINERS.join(',');
   var px = function (a, cw, ch, el) {
     var n = a[0];
@@ -280,8 +284,78 @@
     el.__cqw = wd; el.__cqh = ht;
     setSize(el, wd, ht);
   };
-  w.addEventListener('resize', function () { setTimeout(measure, 50); });
-  w.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
+  // ---- color-mix() ----
+  var ctx = null;
+  var parseColor = function (c) {   // -> [r, g, b, a] or null
+    if (!c) return null;
+    if (c === 'transparent') return [0, 0, 0, 0];
+    if (!ctx) ctx = document.createElement('canvas').getContext('2d');
+    ctx.fillStyle = '#010203'; ctx.fillStyle = c;
+    var v = ctx.fillStyle;
+    if (v === '#010203' && !/^#010203$/i.test(c)) return null;
+    var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(v);
+    if (m) return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16), 1];
+    m = /rgba?\(([^)]*)\)/.exec(v);
+    if (!m) return null;
+    var p = m[1].split(',').map(parseFloat);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  // var(--x, fallback) with nested fallbacks, resolved against an element's computed style
+  var resolve = function (s, cs, depth) {
+    var k = s.indexOf('var(');
+    if (k < 0 || depth > 6) return s.trim();
+    var d = 0, j = k + 3, comma = -1;
+    for (; j < s.length; j++) {
+      var ch = s.charAt(j);
+      if (ch === '(') d++;
+      else if (ch === ')') { if (--d === 0) break; }
+      else if (ch === ',' && d === 1 && comma < 0) comma = j;
+    }
+    var name = s.slice(k + 4, comma > 0 ? comma : j).trim();
+    var val = cs.getPropertyValue(name).trim();
+    if (!val && comma > 0) val = s.slice(comma + 1, j);
+    return resolve(s.slice(0, k) + val + s.slice(j + 1), cs, depth + 1);
+  };
+  var mix = function (a, p, b) {
+    var al = a[3] * p + b[3] * (1 - p);
+    if (al <= 0) return 'rgba(0, 0, 0, 0)';
+    var ch = function (i) { return Math.round((a[i] * a[3] * p + b[i] * b[3] * (1 - p)) / al); };
+    return 'rgba(' + ch(0) + ', ' + ch(1) + ', ' + ch(2) + ', ' + Math.round(al * 1000) / 1000 + ')';
+  };
+  var paintColors = function () {
+    for (var k = 0; k < COLORS.length; k++) {
+      var e = COLORS[k], els;
+      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i], cs = w.getComputedStyle(el);
+        var a = parseColor(resolve(e[1], cs, 0)), b = parseColor(resolve(e[3], cs, 0));
+        if (!a || !b) continue;
+        var v = mix(a, e[2], b);
+        if (el.style.getPropertyValue('--pbc' + k) !== v) el.style.setProperty('--pbc' + k, v);
+      }
+    }
+  };
+  // ---- aspect-ratio ----
+  var fixAspect = function () {
+    for (var k = 0; k < ASPECT.length; k++) {
+      var e = ASPECT[k], els;
+      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (e[2] === 'width') { var h = el.offsetHeight; if (h > 0) el.style.width = Math.round(h * e[1]) + 'px'; }
+        else { var wd = el.offsetWidth; if (wd > 0) el.style.height = Math.round(wd / e[1]) + 'px'; }
+      }
+    }
+  };
+  var later = 0;
+  var refresh = function () {
+    if (later) return;
+    later = setTimeout(function () { later = 0; measure(); paintColors(); fixAspect(); }, 80);
+  };
+  w.__pbRefresh = refresh;
+
+  w.addEventListener('resize', refresh);
+  w.addEventListener('orientationchange', function () { setTimeout(refresh, 300); });
   document.addEventListener('DOMContentLoaded', function () {
     // flex gap support test: two 1px children in a flex row with 1px gap are 3px wide when it works
     var t = document.createElement('div');
@@ -292,9 +366,17 @@
     if (t.scrollWidth !== 3) document.documentElement.className += ' no-flex-gap';
     document.body.removeChild(t);
     measure();
-    if (sel && w.MutationObserver) new MutationObserver(function (list) {
-      for (var i = 0; i < list.length; i++) if (list[i].addedNodes.length) measureNew(list[i].addedNodes);
+    refresh();
+    // new widgets: measure them now, then recolour and resize their boxes (text-only changes such as the clock
+    // ticking add no elements and are ignored)
+    if (w.MutationObserver) new MutationObserver(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var nodes = list[i].addedNodes;
+        if (!nodes.length) continue;
+        if (sel) measureNew(nodes);
+        for (var j = 0; j < nodes.length; j++) if (nodes[j].nodeType === 1) { refresh(); break; }
+      }
     }).observe(document.body, { childList: true, subtree: true });
-    setInterval(measure, 15000);
+    setInterval(refresh, 15000);
   });
 })();

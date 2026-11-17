@@ -43,7 +43,8 @@ for (const f of fs.readdirSync(src)) {
     if (/^\s*(import|export)\s/m.test(code)) continue;
     fs.writeFileSync(path.join(out, f), (await transform(code, { target: TARGET, loader: 'js' })).code);
   } else if (f.endsWith('.css')) {
-    const css = (await transform(fs.readFileSync(p, 'utf8'), { loader: 'css', target: TARGET })).code;
+    // CSS can target the browser itself (adds -webkit-sticky, -webkit-backdrop-filter...)
+    const css = (await transform(fs.readFileSync(p, 'utf8'), { loader: 'css', target: ['safari10'] })).code;
     fs.writeFileSync(path.join(out, f), rewriteCss(css));
   } else if (f !== 'index.html') {
     fs.cpSync(p, path.join(out, f), { recursive: true });
@@ -98,12 +99,15 @@ fs.writeFileSync(path.join(out, 'index.html'), html);
 // 3. Polyfills, with the selectors of the CSS containers baked in.
 const shim = fs.readFileSync(path.join(here, '..', 'bridge', 'ipad-compat.js'), 'utf8')
   .replace('/*CONTAINERS*/[]', JSON.stringify([...containers]))
-  .replace('/*MATH*/[]', JSON.stringify(MATH.map((x) => [x.f, x.a])));
+  .replace('/*MATH*/[]', JSON.stringify(MATH.map((x) => [x.f, x.a])))
+  .replace('/*COLORS*/[]', JSON.stringify(COLORS))
+  .replace('/*ASPECT*/[]', JSON.stringify(ASPECT));
 fs.writeFileSync(path.join(out, 'ipad-compat.js'), shim);
 fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad.css'), path.join(out, 'ipad.css'));
 fs.copyFileSync(path.join(here, '..', 'bridge', 'ipad-pager.js'), path.join(out, 'ipad-pager.js'));
 for (const f of ['LICENSE']) if (fs.existsSync(path.join(repo, f))) fs.copyFileSync(path.join(repo, f), path.join(out, 'PHONEBOX-LICENSE'));
-console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length);
+console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length,
+  '· color-mix:', COLORS.length, '· aspect-ratio:', ASPECT.length);
 
 // --- CSS rewriting ------------------------------------------------------------------------------------------------
 var containers;
@@ -123,6 +127,10 @@ function rewriteCss(css) {
     const m = /^(.*?):is\(([^()]*)\)(.*)$/s.exec(s.trim());
     return m ? m[2].split(',').map((x) => m[1] + x.trim() + m[3]) : [s.trim()];
   }).join(', ') + ' {');
+  css = lowerPlace(css);
+  css = prefixSizing(css);
+  css = lowerColorMix(css);
+  css = lowerAspect(css);
   css = css.replace(/(^|[;{\s])(row-|column-)?gap\s*:([^;}]+)/g, (m, pre, kind, val) =>
     `${pre}grid-${kind || ''}gap:${val};${kind || ''}gap:${val}`);
   css += flexGapFallback(css);
@@ -194,4 +202,84 @@ function flexGapFallback(css) {
     out += sel.split(/,(?![^(]*\))/).map((s) => `.no-flex-gap ${s.trim()} > * + *`).join(', ') + ` { ${prop}: ${v}; }\n`;
   }
   return out;
+}
+
+// place-items/place-content/place-self (Safari 11+): the shorthand is dropped, so items sit top-left instead of
+// centred (play/pause icons, letter tiles...). Expand to the longhands Safari 10 knows.
+function lowerPlace(css) {
+  return css.replace(/(^|[;{\s])place-(items|content|self)\s*:\s*([^;}]+)/g, (_, pre, kind, val) => {
+    const [a, b] = val.trim().split(/\s+/);
+    return `${pre}align-${kind}: ${a}; justify-${kind}: ${b || a}`;
+  });
+}
+
+// width: max-content etc. need the -webkit- prefix before Safari 11.
+function prefixSizing(css) {
+  return css.replace(/(^|[;{\s])((?:min-|max-)?(?:width|height))\s*:\s*(max-content|min-content|fit-content)\s*(?=[;}])/g,
+    (_, pre, prop, val) => `${pre}${prop}: -webkit-${val}; ${prop}: ${val}`);
+}
+
+// Selector used at runtime to find the elements a rule applies to: states and pseudo-elements are dropped
+// (custom properties set on the element reach its ::before/::after too).
+function hostSelector(sel) {
+  return sel.split(/,(?![^(]*\))/).map((s) => s.replace(/::?(before|after|hover|active|focus-visible|focus-within|focus|placeholder|-webkit-[\w-]+)(\([^)]*\))?/g, '').trim())
+    .filter((s) => s && !/:has\(|:where\(/.test(s)).join(', ');
+}
+
+// Plain style rules with their selector, including those nested in @media/@supports.
+function eachRule(css, fn) {
+  return css.replace(/(?<=^|[{}])([^{}@]*[^{}@\s][^{}@]*)\{([^{}]*)\}/g, (all, sel, body) => sel + '{' + fn(sel.trim(), body) + '}');
+}
+
+// color-mix() (Safari 16.2+): the whole declaration is dropped, so tinted tiles, pills and rows lose their colour.
+// Each one becomes var(--pbcN, fallback); ipad-compat.js mixes the colours per element (their var()s can differ
+// per tile) and sets --pbcN on the elements the rule matches.
+var COLORS;
+function lowerColorMix(css) {
+  COLORS ??= [];
+  return eachRule(css, (sel, body) => {
+    if (!body.includes('color-mix(')) return body;
+    const host = hostSelector(sel);
+    let out = '', i = 0, k;
+    while ((k = body.indexOf('color-mix(', i)) >= 0) {
+      let depth = 0, j = k + 9, args = [], last = j + 1;
+      for (; j < body.length; j++) {
+        const c = body[j];
+        if (c === '(') depth++;
+        else if (c === ')') { if (--depth === 0) { args.push(body.slice(last, j)); break; } }
+        else if (c === ',' && depth === 1) { args.push(body.slice(last, j)); last = j + 1; }
+      }
+      const [space, a, b] = args.map((x) => x.trim());
+      const split = (x) => { const m = /^(.*?)\s+(\d*\.?\d+)%$/.exec(x); return m ? [m[1].trim(), +m[2] / 100] : [x, null]; };
+      let [ca, pa] = split(a), [cb, pb] = split(b);
+      if (pa == null && pb == null) pa = 0.5; else if (pa == null) pa = 1 - pb;
+      let rep = ca;
+      if (host && /srgb/.test(space)) {
+        let n = COLORS.findIndex((x) => x[0] === host && x[1] === ca && x[2] === pa && x[3] === cb);
+        if (n < 0) { n = COLORS.length; COLORS.push([host, ca, pa, cb]); }
+        rep = `var(--pbc${n}, ${cb === 'transparent' ? 'transparent' : ca})`;
+      }
+      out += body.slice(i, k) + rep;
+      i = j + 1;
+    }
+    return out + body.slice(i);
+  });
+}
+
+// aspect-ratio (Safari 15+): boxes sized by one side collapse to 0 on the other (album art, dials, clocks).
+// ipad-compat.js sets the missing side inline from the given one. [selector, ratio, side to set]
+var ASPECT;
+function lowerAspect(css) {
+  ASPECT ??= [];
+  eachRule(css, (sel, body) => {
+    const m = /(?:^|[;\s])aspect-ratio\s*:\s*([\d.]+)(?:\s*\/\s*([\d.]+))?/.exec(body);
+    if (!m) return body;
+    const ratio = +m[1] / (m[2] ? +m[2] : 1);
+    const has = (p) => new RegExp('(?:^|[;\\s])' + p + '\\s*:(?!\\s*auto)').test(body);
+    const side = has('height') && !has('width') ? 'width' : 'height';
+    const host = hostSelector(sel);
+    if (host) ASPECT.push([host, ratio, side]);
+    return body;
+  });
+  return css;
 }

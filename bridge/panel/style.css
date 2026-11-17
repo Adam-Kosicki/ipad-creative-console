@@ -56,7 +56,7 @@ body[data-theme=graphite]::before {
   opacity: .45;
 }
 #dots i.on {
-  background: color-mix(in srgb, var(--accent, #fff) 55%, white);
+  background: var(--pbc1, var(--accent, #fff));
 }
 * {
   box-sizing: border-box;
@@ -115,7 +115,7 @@ button {
   width: 100%;
   height: 100%;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   color: var(--muted);
   font-size: 13px;
   text-align: center;
@@ -464,7 +464,7 @@ body.night #pagePauseOverlay {
   background: rgba(255, 255, 255, .07);
   border-radius: 4px;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   font-size: 11px;
   overflow: hidden;
 }
@@ -513,7 +513,7 @@ body.offline #offline {
   display: flex;
   align-items: center;
   grid-gap: 14px;gap: 14px;
-  width: max-content;
+  width: -webkit-max-content; width: max-content;
   max-width: var(--pbm9, 94vw);
   padding: 12px 14px 12px 12px;
   border-radius: 18px;
@@ -535,7 +535,7 @@ body.offline #offline {
   height: 52px;
   flex: 0 0 auto;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
 }
 .nv-ring svg {
   position: absolute;
@@ -623,7 +623,7 @@ body.offline #offline {
   display: flex;
   align-items: center;
   grid-gap: 2px;gap: 2px;
-  width: max-content;
+  width: -webkit-max-content; width: max-content;
   max-width: 86vw;
   border-radius: 999px;
   background: rgba(16, 20, 26, .95);
@@ -970,7 +970,7 @@ body.night #navChip {
   bottom: 0;
   left: 0;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   font-size: 34px;
   color: rgba(255, 255, 255, .5);
 }
@@ -1068,7 +1068,7 @@ body.night #navChip {
   height: 44px;
   flex: 0 0 auto;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   border-radius: 50%;
   transition: transform .12s, background .2s;
 }
@@ -1305,7 +1305,7 @@ body.offline .offline-msg {
   stroke-width: 9;
   stroke-linecap: round;
   transition: stroke-dashoffset .8s ease;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--qc, var(--q)) 50%, transparent));
+  filter: drop-shadow(0 0 6px var(--pbc2, transparent));
 }
 .g-val {
   position: absolute;
@@ -1486,7 +1486,7 @@ body.offline .offline-msg {
   background:
     radial-gradient(
       90% 70% at 50% 0%,
-      color-mix(in srgb, var(--q) 13%, transparent),
+      var(--pbc3, transparent),
       transparent 70%),
     var(--card);
 }
@@ -1509,7 +1509,7 @@ body.offline .offline-msg {
 .q-plan {
   font-size: 11px;
   color: var(--q);
-  background: color-mix(in srgb, var(--q) 15%, transparent);
+  background: var(--pbc4, transparent);
   padding: 2px 8px;
   border-radius: 7px;
   font-weight: 600;
@@ -1843,6 +1843,7 @@ body.offline .offline-msg {
   box-shadow: 0 20px 60px #0009;
 }
 .session-panel-head {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -2048,7 +2049,7 @@ body.offline .offline-msg {
   flex: 0 0 24px;
   border-radius: 6px;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   font-size: 12px;
   font-weight: 700;
   color: #0b0d10;
@@ -2260,9 +2261,9 @@ body.offline .offline-msg {
   background:
     linear-gradient(
       160deg,
-      color-mix(in srgb, var(--k) 22%, transparent),
+      var(--pbc5, transparent),
       rgba(255, 255, 255, .03));
-  border: 1px solid color-mix(in srgb, var(--k) 35%, transparent);
+  border: 1px solid var(--pbc6, transparent);
   transition: transform .1s, filter .2s;
   overflow: hidden;
 }
@@ -2437,7 +2438,7 @@ body.offline .offline-msg {
 }
 .cal-d {
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   border-radius: 8px;
 }
 .cal-d.out {
@@ -2530,15 +2531,15 @@ body.offline .offline-msg {
   background:
     linear-gradient(
       160deg,
-      color-mix(in srgb, var(--n) 30%, #10131a),
-      color-mix(in srgb, var(--n) 14%, #0b0d12));
-  border: 1px solid color-mix(in srgb, var(--n) 40%, transparent);
+      var(--pbc7, var(--n)),
+      var(--pbc8, var(--n)));
+  border: 1px solid var(--pbc9, transparent);
 }
 .note-t {
   white-space: pre-wrap;
   font-size: calc(var(--nf) * calc(1 * var(--cqmin, 1vmin)));
   line-height: 1.3;
-  color: color-mix(in srgb, var(--n) 25%, #fff);
+  color: var(--pbc10, var(--n));
   overflow: hidden;
   height: 100%;
 }
@@ -2898,7 +2899,7 @@ body.offline .offline-msg {
   bottom: 0;
   left: 0;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
 }
 .br-ball {
   width: var(--pbm71, calc(84 * var(--cqh, 1vh)));
@@ -2991,7 +2992,7 @@ body.offline .offline-msg {
   border-radius: 5px;
   border: 1.5px solid var(--dim);
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   font-size: 12px;
   font-weight: 700;
   color: #06080b;
@@ -3649,7 +3650,7 @@ body.offline .offline-msg {
 }
 .ap-letter {
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   border-radius: 11px;
   background: rgba(167, 139, 250, .2);
   font-size: 20px;
@@ -3804,7 +3805,7 @@ body.offline .offline-msg {
   overflow: hidden;
 }
 .ag-row.now {
-  background: color-mix(in srgb, var(--c) 18%, transparent);
+  background: var(--pbc11, transparent);
 }
 .ag-row.now::after {
   content: "";
@@ -4269,7 +4270,7 @@ body.offline .offline-msg {
   bottom: 0;
   left: 0;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   color: var(--muted);
   font-size: 12px;
 }
@@ -4531,7 +4532,7 @@ body.waking::after {
   flex: 1;
   min-height: 0;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
 }
 .cc-wrap {
   position: relative;
@@ -4539,7 +4540,7 @@ body.waking::after {
   aspect-ratio: 1;
   max-width: 100%;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
 }
 .cc-ring {
   position: absolute;
@@ -5156,7 +5157,7 @@ body.controls-top .ap-foot {
   bottom: 0;
   left: 0;
   display: grid;
-  place-items: center;
+  align-items: center; justify-items: center;
   color: var(--muted);
   font-size: 12px;
   pointer-events: none;

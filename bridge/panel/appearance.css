@@ -25,7 +25,7 @@
 }
 .w[data-widget-surface=flat] {
   background: #15191f;
-  background: color-mix(in srgb, var(--bg) 94%, var(--text));
+  background: var(--pbc0, var(--bg));
   background-image: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;

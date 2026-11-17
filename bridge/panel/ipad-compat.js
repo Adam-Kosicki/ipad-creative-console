@@ -212,6 +212,10 @@
   var CONTAINERS = [".radio-carousel",".w",".wc"];
   // clamp()/min()/max() with plain lengths: [fn, [[number, unit], ...]], set as --pbm<index> in px
   var MATH = [["clamp",[[15,"px"],[2.5,"vw"],[24,"px"]]],["clamp",[[84,"px"],[78,"cqh"],[142,"px"]]],["clamp",[[6,"px"],[5,"cqh"],[12,"px"]]],["clamp",[[4,"px"],[4,"cqh"],[9,"px"]]],["clamp",[[42,"px"],[54,"cqh"],[88,"px"]]],["clamp",[[10,"px"],[10,"cqh"],[16,"px"]]],["clamp",[[9.5,"px"],[7.5,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[2.2,"vw"],[20,"px"]]],["clamp",[[10,"px"],[7,"cqmin"],[20,"px"]]],["min",[[760,"px"],[94,"vw"]]],["clamp",[[10,"px"],[5,"cqh"],[12.5,"px"]]],["min",[[100,"cqh","--tf",0.6],[30,"cqw"]]],["clamp",[[11,"px"],[7.5,"cqh"],[19,"px"]]],["clamp",[[2,"px"],[4,"cqh"],[14,"px"]]],["clamp",[[18,"px"],[13,"cqh"],[34,"px"]]],["clamp",[[10,"px"],[5.4,"cqh"],[13,"px"]]],["clamp",[[8,"px"],[6,"cqmin"],[18,"px"]]],["min",[[40,"cqh"],[18,"cqw"]]],["clamp",[[10,"px"],[13,"cqh"],[15,"px"]]],["clamp",[[10,"px"],[8,"cqh"],[14,"px"]]],["clamp",[[8,"px"],[4,"cqh"],[16,"px"]]],["clamp",[[10,"px"],[3,"cqw"],[18,"px"]]],["clamp",[[8,"px"],[3,"cqw"],[18,"px"]]],["min",[[58,"cqh"],[34,"cqw"]]],["clamp",[[8,"px"],[6,"cqh"],[18,"px"]]],["clamp",[[9,"px"],[4.5,"cqh"],[13,"px"]]],["clamp",[[13,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[11,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[5,"px"],[9,"cqh"],[10,"px"]]],["clamp",[[8,"px"],[6,"cqw"],[12,"px"]]],["clamp",[[9,"px"],[12,"cqh"],[11,"px"]]],["clamp",[[16,"px"],[30,"cqh"],[40,"px"]]],["clamp",[[10,"px"],[14,"cqh"],[15,"px"]]],["clamp",[[9.5,"px"],[13,"cqh"],[13,"px"]]],["min",[[66,"cqh"],[88,"cqw"]]],["min",[[15,"cqh"],[22,"cqw"]]],["clamp",[[9,"px"],[6,"cqh"],[13,"px"]]],["clamp",[[9,"px"],[5.4,"cqh"],[12,"px"]]],["clamp",[[18,"px"],[15,"cqh"],[34,"px"]]],["clamp",[[13,"px"],[10,"cqh"],[20,"px"]]],["min",[[50,"cqh"],[170,"px"]]],["min",[[10,"cqh"],[28,"px"]]],["clamp",[[18,"px"],[8,"cqh"],[26,"px"]]],["min",[[58,"cqh"],[124,"px"]]],["clamp",[[16,"px"],[7,"cqmin"],[30,"px"]]],["clamp",[[10,"px"],[3.6,"cqmin"],[14,"px"]]],["min",[[40,"cqh"],[30,"cqw"]]],["clamp",[[10,"px"],[15,"cqh"],[18,"px"]]],["clamp",[[9.5,"px"],[10,"cqh"],[13,"px"]]],["min",[[36,"cqh"],[36,"cqw"]]],["min",[[36,"cqh"],[28,"cqw"]]],["clamp",[[9,"px"],[9,"cqh"],[12,"px"]]],["clamp",[[14,"px"],[9,"cqh"],[30,"px"]]],["clamp",[[10,"px"],[6,"cqh"],[15,"px"]]],["min",[[52,"cqh"],[80,"cqw"]]],["clamp",[[30,"px"],[14,"cqh"],[46,"px"]]],["clamp",[[13,"px"],[6,"cqh"],[19,"px"]]],["clamp",[[10,"px"],[11,"cqh"],[14,"px"]]],["min",[[38,"cqh"],[17,"cqw"]]],["clamp",[[8,"px"],[7,"cqmin"],[16,"px"]]],["min",[[55,"cqh"],[12,"cqw"]]],["min",[[42,"cqh"],[14,"cqw"]]],["min",[[42,"cqh"],[20,"cqw"]]],["clamp",[[10,"px"],[10,"cqh"],[14,"px"]]],["min",[[70,"cqh"],[80,"cqw"]]],["min",[[100,"cqh"],[100,"cqw"]]],["min",[[88,"cqh"],[100,"cqw"]]],["clamp",[[10,"px"],[6,"cqh"],[14,"px"]]],["min",[[30,"cqh"],[15,"cqw"]]],["min",[[38,"cqh"],[60,"cqw"]]],["min",[[48,"cqh"],[30,"cqw"]]],["min",[[84,"cqh"],[84,"cqw"]]],["clamp",[[13,"px"],[9,"cqh"],[26,"px"]]],["clamp",[[18,"px"],[16,"cqh"],[52,"px"]]],["clamp",[[10,"px"],[6,"cqmin"],[20,"px"]]],["min",[[60,"cqh"],[30,"cqw"]]],["clamp",[[12,"px"],[11,"cqh","--qf",1],[30,"px"]]],["clamp",[[10,"px"],[7,"cqh"],[14,"px"]]],["clamp",[[40,"px"],[14,"vmin"],[72,"px"]]],["clamp",[[17,"px"],[6,"vmin"],[32,"px"]]],["clamp",[[11,"px"],[16,"cqh"],[15,"px"]]],["clamp",[[14,"px"],[26,"cqh"],[26,"px"]]],["clamp",[[2,"px"],[6,"cqh"],[12,"px"]]],["min",[[26,"cqh"],[13,"cqw"]]],["max",[[2,"px"],[1.6,"cqh"]]],["clamp",[[10,"px"],[9,"cqh"],[14,"px"]]],["clamp",[[12,"px"],[9,"cqh"],[22,"px"]]],["min",[[46,"px"],[40,"cqw"]]],["clamp",[[10,"px"],[7,"cqh"],[13,"px"]]],["min",[[40,"cqh"],[22,"cqw"]]],["clamp",[[11,"px"],[8,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[7,"cqh"],[15,"px"]]],["clamp",[[11,"px"],[11,"cqmin"],[38,"px"]]],["clamp",[[16,"px"],[9,"cqmin"],[34,"px"]]],["clamp",[[15,"px"],[14,"cqh"],[22,"px"]]],["clamp",[[12,"px"],[6,"cqmin"],[22,"px"]]],["clamp",[[22,"px"],[15,"cqmin"],[76,"px"]]],["clamp",[[11,"px"],[5,"cqmin"],[18,"px"]]],["min",[[34,"cqh"],[86,"px"]]],["min",[[10,"cqh"],[22,"px"]]]];
+  // color-mix(in srgb, A p%, B) per rule: [selector, A, p, B], set as --pbc<index> on the matching elements
+  var COLORS = [[".w[data-widget-surface=flat]","var(--bg)",0.94,"var(--text)"],["#dots i.on","var(--accent, #fff)",0.55,"white"],[".g-dial .fg, .q-dial .fg","var(--qc, var(--q))",0.5,"transparent"],[".q-card","var(--q)",0.13,"transparent"],[".q-plan","var(--q)",0.15,"transparent"],[".key","var(--k)",0.22,"transparent"],[".key","var(--k)",0.35,"transparent"],[".w-note","var(--n)",0.3,"#10131a"],[".w-note","var(--n)",0.14,"#0b0d12"],[".w-note","var(--n)",0.4,"transparent"],[".note-t","var(--n)",0.25,"#fff"],[".ag-row.now","var(--c)",0.18,"transparent"]];
+  // aspect-ratio per rule: [selector, ratio, side to set inline]
+  var ASPECT = [[".art-wrap",1,"width"],[".g-dial",1,"width"],[".q-dial",1,"height"],[".analog",1,"height"],[".br-ball",1,"height"],[".cc-wrap",1,"width"],[".mo-disc",1,"width"]];
   var sel = CONTAINERS.join(',');
   var px = function (a, cw, ch, el) {
     var n = a[0];
@@ -280,8 +284,78 @@
     el.__cqw = wd; el.__cqh = ht;
     setSize(el, wd, ht);
   };
-  w.addEventListener('resize', function () { setTimeout(measure, 50); });
-  w.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
+  // ---- color-mix() ----
+  var ctx = null;
+  var parseColor = function (c) {   // -> [r, g, b, a] or null
+    if (!c) return null;
+    if (c === 'transparent') return [0, 0, 0, 0];
+    if (!ctx) ctx = document.createElement('canvas').getContext('2d');
+    ctx.fillStyle = '#010203'; ctx.fillStyle = c;
+    var v = ctx.fillStyle;
+    if (v === '#010203' && !/^#010203$/i.test(c)) return null;
+    var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(v);
+    if (m) return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16), 1];
+    m = /rgba?\(([^)]*)\)/.exec(v);
+    if (!m) return null;
+    var p = m[1].split(',').map(parseFloat);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  // var(--x, fallback) with nested fallbacks, resolved against an element's computed style
+  var resolve = function (s, cs, depth) {
+    var k = s.indexOf('var(');
+    if (k < 0 || depth > 6) return s.trim();
+    var d = 0, j = k + 3, comma = -1;
+    for (; j < s.length; j++) {
+      var ch = s.charAt(j);
+      if (ch === '(') d++;
+      else if (ch === ')') { if (--d === 0) break; }
+      else if (ch === ',' && d === 1 && comma < 0) comma = j;
+    }
+    var name = s.slice(k + 4, comma > 0 ? comma : j).trim();
+    var val = cs.getPropertyValue(name).trim();
+    if (!val && comma > 0) val = s.slice(comma + 1, j);
+    return resolve(s.slice(0, k) + val + s.slice(j + 1), cs, depth + 1);
+  };
+  var mix = function (a, p, b) {
+    var al = a[3] * p + b[3] * (1 - p);
+    if (al <= 0) return 'rgba(0, 0, 0, 0)';
+    var ch = function (i) { return Math.round((a[i] * a[3] * p + b[i] * b[3] * (1 - p)) / al); };
+    return 'rgba(' + ch(0) + ', ' + ch(1) + ', ' + ch(2) + ', ' + Math.round(al * 1000) / 1000 + ')';
+  };
+  var paintColors = function () {
+    for (var k = 0; k < COLORS.length; k++) {
+      var e = COLORS[k], els;
+      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i], cs = w.getComputedStyle(el);
+        var a = parseColor(resolve(e[1], cs, 0)), b = parseColor(resolve(e[3], cs, 0));
+        if (!a || !b) continue;
+        var v = mix(a, e[2], b);
+        if (el.style.getPropertyValue('--pbc' + k) !== v) el.style.setProperty('--pbc' + k, v);
+      }
+    }
+  };
+  // ---- aspect-ratio ----
+  var fixAspect = function () {
+    for (var k = 0; k < ASPECT.length; k++) {
+      var e = ASPECT[k], els;
+      try { els = document.querySelectorAll(e[0]); } catch (_) { continue; }
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (e[2] === 'width') { var h = el.offsetHeight; if (h > 0) el.style.width = Math.round(h * e[1]) + 'px'; }
+        else { var wd = el.offsetWidth; if (wd > 0) el.style.height = Math.round(wd / e[1]) + 'px'; }
+      }
+    }
+  };
+  var later = 0;
+  var refresh = function () {
+    if (later) return;
+    later = setTimeout(function () { later = 0; measure(); paintColors(); fixAspect(); }, 80);
+  };
+  w.__pbRefresh = refresh;
+
+  w.addEventListener('resize', refresh);
+  w.addEventListener('orientationchange', function () { setTimeout(refresh, 300); });
   document.addEventListener('DOMContentLoaded', function () {
     // flex gap support test: two 1px children in a flex row with 1px gap are 3px wide when it works
     var t = document.createElement('div');
@@ -292,9 +366,17 @@
     if (t.scrollWidth !== 3) document.documentElement.className += ' no-flex-gap';
     document.body.removeChild(t);
     measure();
-    if (sel && w.MutationObserver) new MutationObserver(function (list) {
-      for (var i = 0; i < list.length; i++) if (list[i].addedNodes.length) measureNew(list[i].addedNodes);
+    refresh();
+    // new widgets: measure them now, then recolour and resize their boxes (text-only changes such as the clock
+    // ticking add no elements and are ignored)
+    if (w.MutationObserver) new MutationObserver(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var nodes = list[i].addedNodes;
+        if (!nodes.length) continue;
+        if (sel) measureNew(nodes);
+        for (var j = 0; j < nodes.length; j++) if (nodes[j].nodeType === 1) { refresh(); break; }
+      }
     }).observe(document.body, { childList: true, subtree: true });
-    setInterval(measure, 15000);
+    setInterval(refresh, 15000);
   });
 })();
