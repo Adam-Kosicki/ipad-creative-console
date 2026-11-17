@@ -360,6 +360,23 @@
     document.body.removeChild(b);
     return ok;
   };
+  // A button shrink-wraps its contents in old Safari, so width:100% on the wrapper would only be as wide as the
+  // content (labels then truncated at 92% of that). Give the wrapper the button's real inner size in px.
+  var wrapped = [];
+  var sizeWrapper = function (b, span) {
+    var cs = w.getComputedStyle(b);
+    var wd = b.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    var ht = b.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    if (wd > 0) span.style.width = wd + 'px';
+    if (ht > 0) span.style.height = ht + 'px';
+  };
+  var resizeWrappers = function () {
+    for (var i = wrapped.length - 1; i >= 0; i--) {
+      if (!document.body.contains(wrapped[i][0])) { wrapped.splice(i, 1); continue; }
+      wrapped[i][1].style.width = ''; wrapped[i][1].style.height = '';
+      sizeWrapper(wrapped[i][0], wrapped[i][1]);
+    }
+  };
   var wrapButtons = function (root) {
     if (buttonFlex === null) {
       var ios = /OS (\d+)_\d/.exec(navigator.userAgent);
@@ -389,12 +406,14 @@
       while (b.firstChild) span.appendChild(b.firstChild);
       b.appendChild(span);
       b.style.display = inl ? 'inline-block' : 'block';
+      wrapped.push([b, span]);
+      sizeWrapper(b, span);
     }
   };
   var later = 0;
   var refresh = function () {
     if (later) return;
-    later = setTimeout(function () { later = 0; wrapButtons(document.body); measure(); paintColors(); fixAspect(); }, 80);
+    later = setTimeout(function () { later = 0; wrapButtons(document.body); resizeWrappers(); measure(); paintColors(); fixAspect(); }, 80);
   };
   w.__pbRefresh = refresh;
 

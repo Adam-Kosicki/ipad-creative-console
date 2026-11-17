@@ -77,6 +77,8 @@ for (const d of fs.readdirSync(src)) {
     i = end; re.lastIndex = end; n++;
   }
   js = res + js.slice(i);
+  // space-separated hsl(120 70% 65%) is Safari 12.1+: letter tiles for apps without an icon came out colourless
+  js = js.replace(/hsl\(([^()\s,]+) (\d+%) (\d+%)\)/g, 'hsl($1, $2, $3)');
   fs.writeFileSync(f, js);
   console.log('dataset deletes rewritten:', n);
 }

@@ -6425,7 +6425,7 @@ addEventListener('message',function(e){var m=e.data;if(!m||m.phonebox!=='data')r
   function monogramColor(name) {
     let x = 0;
     for (const ch of name) x = (x * 31 + ch.charCodeAt(0)) % 360;
-    return `hsl(${x} 70% 65%)`;
+    return `hsl(${x}, 70%, 65%)`;
   }
   var ICON_CACHE = /* @__PURE__ */ new Map();
   var MAX_ICON_CACHE = 200;
