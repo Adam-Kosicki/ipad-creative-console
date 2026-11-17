@@ -361,7 +361,11 @@
     return ok;
   };
   var wrapButtons = function (root) {
-    if (buttonFlex === null) buttonFlex = w.__pbForceWrap ? false : testButtonFlex();
+    if (buttonFlex === null) {
+      var ios = /OS (\d+)_\d/.exec(navigator.userAgent);
+      // the probe passes on Safari 10 for simple buttons but real tiles still break, so go by the OS version
+      buttonFlex = w.__pbForceWrap || (ios && +ios[1] < 11) ? false : testButtonFlex();
+    }
     if (buttonFlex) return;
     var list = [];
     if (root.nodeType === 1) { if (root.tagName === 'BUTTON') list.push(root); var q = root.querySelectorAll('button'); for (var i = 0; i < q.length; i++) list.push(q[i]); }
