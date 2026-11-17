@@ -51,6 +51,8 @@ public class TvHost {
 
     public void say(String text) { speaker.say(text); }
 
+    public void heard(String text) { AssistantService.heard(text); }
+
     public String volume(String action, int level) throws Exception {
         AudioManager am = context.getSystemService(AudioManager.class);
         int s = AudioManager.STREAM_MUSIC, max = am.getStreamMaxVolume(s);

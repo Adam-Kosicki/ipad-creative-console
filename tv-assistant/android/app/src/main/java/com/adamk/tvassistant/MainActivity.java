@@ -159,9 +159,10 @@ public class MainActivity extends Activity {
                 if (!m.optString("error").isEmpty()) museLine += "\nPairing problem: " + m.optString("error");
             }
             status.setText(String.format(Locale.US,
-                    "State: %s\n%s\nBluetooth: %s\nPop-ups allowed: %s\nLast reply: %s\n%s%s",
+                    "State: %s\n%s\nBluetooth: %s\nPop-ups allowed: %s\nYou said: %s\nLast reply: %s\n%s%s",
                     AssistantService.state, museLine, BlePeripheral.support(MainActivity.this),
                     Settings.canDrawOverlays(MainActivity.this) ? "yes" : "no",
+                    AssistantService.lastHeard.isEmpty() ? "—" : AssistantService.lastHeard,
                     AssistantService.lastReply.isEmpty() ? "—" : AssistantService.lastReply,
                     AssistantService.lastError.isEmpty() ? "" : "Problem: " + AssistantService.lastError,
                     pendingNote.isEmpty() ? "" : "\n" + pendingNote));

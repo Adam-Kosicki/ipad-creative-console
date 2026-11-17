@@ -34,6 +34,7 @@ _service = None
 _loop: asyncio.AbstractEventLoop | None = None
 _ask_lock: asyncio.Lock | None = None
 _scope = None
+_follower = None
 _audio_dir = ""
 
 
@@ -212,6 +213,10 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
     global _scope
     from musegadget.muse_turn import MuseTurn, ReplayScope
 
+    global _follower
+    if _follower is not None and not _follower.done():
+        _follower.cancel()  # a new request: stop speaking leftovers from the last one
+    _follower = None
     async with _ask_lock:
         sid = _session_id()
         if _scope is None:
@@ -272,10 +277,11 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                 turn.acknowledge(ack)
             started = time.monotonic()
             message_done = False
+            heard = ""
             while True:
                 now = time.monotonic()
                 has_text = any(r.text.strip() for r in turn.replies.values())
-                # Speak as soon as Muse's first message is finished; tool calls still run on their own.
+                # Speak as soon as Muse's first message is finished; later messages follow below.
                 if has_text and (message_done or turn.complete(now)):
                     break
                 if turn.settled(now) or now - started > ASK_TIMEOUT_S:
@@ -284,17 +290,29 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                     event = await asyncio.wait_for(queue.get(), 0.25)
                 except asyncio.TimeoutError:
                     continue
-                if event.get("event") not in ("delta.text_append",):
-                    log.info("chat event %s", event.get("event"))
+                name = event.get("event")
+                if name not in ("delta.text_append",):
+                    log.info("chat event %s", name)
+                if name == "message.user":
+                    said = _user_text(event)
+                    if said and said != heard:
+                        heard = said
+                        _show_heard(heard)
                 turn.feed(event)
-                if event.get("event") == "delta.message_done":
+                if name == "delta.message_done":
                     message_done = True
-            turn.retire()
+            replies = [r for r in turn.replies.values() if r.text.strip()]
+            if replies and not turn.complete(time.monotonic()) and pump_task is not None:
+                # Muse may send more messages (e.g. after a tool call): keep listening and speak them too.
+                _follower = asyncio.ensure_future(
+                    _follow_rest(turn, queue, pump_task, {r.message_id for r in replies}))
+                pump_task = None
+            else:
+                turn.retire()
         finally:
             if pump_task is not None:
                 pump_task.cancel()
 
-        replies = [r for r in turn.replies.values() if r.text.strip()]
         files = []
         for reply in replies if not FAST_SPEECH else []:
             try:
@@ -311,7 +329,63 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
         text_out = "\n\n".join(r.text.strip() for r in replies)
         if not text_out:
             return {"ok": False, "error": "Muse didn't answer in time."}
-        return {"ok": True, "text": text_out, "audio_files": files}
+        return {"ok": True, "text": text_out, "audio_files": files, "heard": heard}
+
+
+def _user_text(event: dict) -> str:
+    """Muse's transcription of the user's message, from a message.user event."""
+    payload = event.get("payload") or {}
+    for key in ("transcript", "text", "display_text", "content"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            text = value.strip()
+            # Drop the instructions we send with every request.
+            if text.startswith(VOICE_HINT.strip()):
+                text = text[len(VOICE_HINT.strip()):].strip()
+            if text:
+                return text
+    log.info("message.user without text; keys: %s", sorted(payload))
+    return ""
+
+
+def _show_heard(text: str) -> None:
+    try:
+        _host.heard(text)
+    except Exception:
+        log.exception("could not show the transcription")
+
+
+async def _follow_rest(turn, queue: asyncio.Queue, pump_task, spoken: set) -> None:
+    """After the first answer is spoken, speak any further messages Muse sends for the same request."""
+    started = time.monotonic()
+    try:
+        while True:
+            now = time.monotonic()
+            if turn.complete(now) or turn.settled(now) or now - started > ASK_TIMEOUT_S:
+                break
+            try:
+                event = await asyncio.wait_for(queue.get(), 0.25)
+            except asyncio.TimeoutError:
+                continue
+            name = event.get("event")
+            if name not in ("delta.text_append",):
+                log.info("chat event %s (follow-up)", name)
+            turn.feed(event)
+            for reply in list(turn.replies.values()):
+                if reply.done and reply.text.strip() and reply.message_id not in spoken:
+                    spoken.add(reply.message_id)
+                    log.info("speaking a further Muse message")
+                    _host.say(reply.text.strip())
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        log.exception("following Muse's further messages failed")
+    finally:
+        pump_task.cancel()
+        try:
+            turn.retire()
+        except Exception:
+            pass
 
 
 # -- Commands Muse can run on the TV ---------------------------------------------------

@@ -68,6 +68,14 @@ public class AssistantService extends Service {
     private AudioFocusRequest focus;
     private volatile boolean talkRequested = false;
     private volatile long cooldownUntil = 0;
+    private static volatile AssistantService instance;
+
+    /** Muse's transcription of what was said, shown on screen for checking mic quality. */
+    static void heard(String text) {
+        lastHeard = text;
+        AssistantService s = instance;
+        if (s != null && state == State.THINKING) s.overlay.show("You said: \"" + text + "\"\n\nThinking…", 0);
+    }
 
     static void start(Context c) {
         Intent i = new Intent(c, AssistantService.class);
@@ -79,6 +87,7 @@ public class AssistantService extends Service {
         super.onCreate();
         prefs = new Prefs(this);
         overlay = new Overlay(this);
+        instance = this;
         audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         startForeground(1, notification());
         tts = new TextToSpeech(this, s -> {
@@ -280,10 +289,12 @@ public class AssistantService extends Service {
                 return;
             }
             String text = r.optString("text", "");
+            String heard = r.optString("heard", "");
+            if (!heard.isEmpty()) lastHeard = heard;
             lastReply = text;
             lastError = "";
             state = State.SPEAKING;
-            overlay.show(text, 0);
+            overlay.show(lastHeard.isEmpty() ? text : "You said: \"" + lastHeard + "\"\n\n" + text, 0);
             JSONArray audioUrls = r.optJSONArray("audio");
             JSONArray audioFiles = r.optJSONArray("audio_files");
             boolean played = false;
