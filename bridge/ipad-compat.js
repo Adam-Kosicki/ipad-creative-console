@@ -347,10 +347,50 @@
       }
     }
   };
+  // ---- display:flex / grid on <button> (Safari < 11 lays buttons out as plain blocks) ----
+  // The button's children move into a span that carries the flex layout, so shortcut tiles, play buttons and
+  // chips centre their content again. Works for flex and for single-child grids (place-items: center).
+  var buttonFlex = null;
+  var testButtonFlex = function () {
+    var b = document.createElement('button'), c = document.createElement('span');
+    b.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border:0;position:absolute;visibility:hidden';
+    c.style.cssText = 'display:block;width:10px;height:10px';
+    b.appendChild(c); document.body.appendChild(b);
+    var ok = c.offsetTop > 5;
+    document.body.removeChild(b);
+    return ok;
+  };
+  var wrapButtons = function (root) {
+    if (buttonFlex === null) buttonFlex = w.__pbForceWrap ? false : testButtonFlex();
+    if (buttonFlex) return;
+    var list = [];
+    if (root.nodeType === 1) { if (root.tagName === 'BUTTON') list.push(root); var q = root.querySelectorAll('button'); for (var i = 0; i < q.length; i++) list.push(q[i]); }
+    for (var k = 0; k < list.length; k++) {
+      var b = list[k];
+      if (b.__pbw) continue;
+      var cs = w.getComputedStyle(b), d = cs.display;
+      if (d !== 'flex' && d !== 'inline-flex' && d !== 'grid' && d !== 'inline-grid') continue;
+      b.__pbw = true;
+      var grid = d.indexOf('grid') >= 0, inl = d.indexOf('inline') === 0;
+      var span = document.createElement('span');
+      span.className = 'pb-bw';
+      var st = span.style;
+      st.display = 'flex'; st.boxSizing = 'border-box'; st.width = '100%'; st.height = '100%';
+      st.flexDirection = grid ? 'column' : cs.flexDirection;
+      st.flexWrap = grid ? 'nowrap' : cs.flexWrap;
+      st.alignItems = grid ? (cs.alignItems === 'normal' ? 'stretch' : cs.alignItems) : cs.alignItems;
+      st.justifyContent = grid ? (cs.justifyItems === 'center' || cs.alignItems === 'center' ? 'center' : 'flex-start') : cs.justifyContent;
+      if (grid && cs.alignItems === 'center') st.alignItems = 'center';
+      if (cs.gap && cs.gap !== 'normal') st.gap = cs.gap;
+      while (b.firstChild) span.appendChild(b.firstChild);
+      b.appendChild(span);
+      b.style.display = inl ? 'inline-block' : 'block';
+    }
+  };
   var later = 0;
   var refresh = function () {
     if (later) return;
-    later = setTimeout(function () { later = 0; measure(); paintColors(); fixAspect(); }, 80);
+    later = setTimeout(function () { later = 0; wrapButtons(document.body); measure(); paintColors(); fixAspect(); }, 80);
   };
   w.__pbRefresh = refresh;
 

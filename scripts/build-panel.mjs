@@ -199,7 +199,8 @@ function flexGapFallback(css) {
     const v = column ? parts[0] : (parts[1] || parts[0]);
     if (/^0(px)?$/.test(v)) continue;
     const prop = column ? 'margin-top' : 'margin-left';
-    out += sel.split(/,(?![^(]*\))/).map((s) => `.no-flex-gap ${s.trim()} > * + *`).join(', ') + ` { ${prop}: ${v}; }\n`;
+    // buttons keep their children in a span.pb-bw (see ipad-compat.js), so match that level too
+    out += sel.split(/,(?![^(]*\))/).flatMap((s) => [`.no-flex-gap ${s.trim()} > * + *`, `.no-flex-gap ${s.trim()} > .pb-bw > * + *`]).join(', ') + ` { ${prop}: ${v}; }\n`;
   }
   return out;
 }
