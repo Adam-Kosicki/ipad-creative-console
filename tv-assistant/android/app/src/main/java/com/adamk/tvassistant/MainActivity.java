@@ -103,6 +103,9 @@ public class MainActivity extends Activity {
         prefs.set(i.getStringExtra("bridge"), i.getStringExtra("token"), threshold, wake);
         if (i.hasExtra("gain")) prefs.setGain(i.getFloatExtra("gain", 8f));
         if (i.hasExtra("source")) prefs.setSource(i.getIntExtra("source", 6));
+        if (i.getBooleanExtra("pair", false)) {
+            new Thread(() -> { Muse.init(this, t -> { }); Muse.pair(); }).start();
+        }
         String sdkToken = i.getStringExtra("sdk_token");
         if (sdkToken != null) {
             new Thread(() -> {

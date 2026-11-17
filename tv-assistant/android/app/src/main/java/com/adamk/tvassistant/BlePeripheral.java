@@ -65,8 +65,11 @@ public class BlePeripheral {
         BluetoothAdapter a = m == null ? null : m.getAdapter();
         if (a == null) return "no Bluetooth";
         if (!a.isEnabled()) return "Bluetooth is off";
-        return a.isMultipleAdvertisementSupported() && a.getBluetoothLeAdvertiser() != null
-                ? "can pair" : "this TV can't advertise over Bluetooth LE";
+        boolean multi = a.isMultipleAdvertisementSupported();
+        boolean adv = a.getBluetoothLeAdvertiser() != null;
+        boolean ext = android.os.Build.VERSION.SDK_INT >= 26 && a.isLeExtendedAdvertisingSupported();
+        String detail = " (multi-adv " + multi + ", advertiser " + adv + ", extended " + ext + ")";
+        return (adv ? "should be able to pair" : "this TV can't advertise over Bluetooth LE") + detail;
     }
 
     @SuppressWarnings("MissingPermission")
