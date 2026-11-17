@@ -14,6 +14,59 @@
     d = d === undefined ? 1 : d;
     return d < 1 ? this.slice() : this.reduce(function (a, v) { return a.concat(Array.isArray(v) ? v.flat(d - 1) : v); }, []);
   };
+  // for...of / spread over DOM collections: Safari 10 only makes NodeList iterable. Give the other array-like
+  // collections Array's iterator (seen on the iPad: "for (const sheet of document.styleSheets)" threw).
+  if (w.Symbol && Symbol.iterator) {
+    ['StyleSheetList', 'CSSRuleList', 'HTMLCollection', 'HTMLAllCollection', 'HTMLFormControlsCollection', 'HTMLOptionsCollection',
+      'NamedNodeMap', 'DOMTokenList', 'DOMStringList', 'MediaList', 'FileList', 'TouchList', 'NodeList', 'DataTransferItemList',
+      'MimeTypeArray', 'PluginArray', 'SVGLengthList', 'SVGNumberList', 'SVGStringList', 'SVGTransformList', 'SVGPointList']
+      .forEach(function (n) {
+        var C = w[n];
+        if (C && C.prototype && !C.prototype[Symbol.iterator]) {
+          try { Object.defineProperty(C.prototype, Symbol.iterator, { value: Array.prototype[Symbol.iterator], configurable: true, writable: true }); } catch (_) {}
+        }
+      });
+  }
+  // Intl.DateTimeFormat#formatToParts (Safari 11): the world clocks use it with en-GB numeric fields only, so split
+  // the formatted string into its numbers and name them in en-GB order.
+  if (w.Intl && Intl.DateTimeFormat && !Intl.DateTimeFormat.prototype.formatToParts) {
+    Intl.DateTimeFormat.prototype.formatToParts = function (d) {
+      var s = this.format(d), o = this.resolvedOptions(), order = /^en-US/.test(o.locale)
+        ? ['month', 'day', 'year', 'hour', 'minute', 'second'] : ['day', 'month', 'year', 'hour', 'minute', 'second'];
+      var fields = order.filter(function (k) { return o[k] !== undefined; });
+      var nums = s.match(/\d+/g) || [], parts = [];
+      for (var i = 0; i < fields.length && i < nums.length; i++) {
+        var v = nums[i];
+        if (fields[i] === 'hour' && v === '24') v = '00';
+        parts.push({ type: fields[i], value: v });
+      }
+      if (/PM/i.test(s)) parts.push({ type: 'dayPeriod', value: 'PM' }); else if (/AM/i.test(s)) parts.push({ type: 'dayPeriod', value: 'AM' });
+      return parts;
+    };
+  }
+  // scrollTo({ left, top }) on elements (Safari 10.1 has only window.scrollTo(x, y))
+  if (!Element.prototype.scrollTo) Element.prototype.scrollTo = function (a, b) {
+    if (a && typeof a === 'object') { if (a.left !== undefined) this.scrollLeft = a.left; if (a.top !== undefined) this.scrollTop = a.top; }
+    else { this.scrollLeft = a; this.scrollTop = b; }
+  };
+  if (!Element.prototype.toggleAttribute) Element.prototype.toggleAttribute = function (n, f) {
+    var on = f === undefined ? !this.hasAttribute(n) : !!f;
+    if (on) this.setAttribute(n, ''); else this.removeAttribute(n);
+    return on;
+  };
+  if (!Array.prototype.flatMap) Array.prototype.flatMap = function (f, t) { return this.map(f, t).flat(); };
+  if (!String.prototype.trimEnd) String.prototype.trimEnd = function () { return this.replace(/\s+$/, ''); };
+  if (!String.prototype.trimStart) String.prototype.trimStart = function () { return this.replace(/^\s+/, ''); };
+  if (!w.queueMicrotask) w.queueMicrotask = function (f) { Promise.resolve().then(f); };
+  // MediaQueryList.addEventListener (Safari 14)
+  if (w.matchMedia) {
+    var mql = w.matchMedia('all');
+    if (mql && !mql.addEventListener && mql.addListener) {
+      var MQ = Object.getPrototypeOf(mql);
+      MQ.addEventListener = function (t, f) { this.addListener(f); };
+      MQ.removeEventListener = function (t, f) { this.removeListener(f); };
+    }
+  }
   if (w.Promise && !Promise.prototype['finally']) Promise.prototype['finally'] = function (f) {
     return this.then(function (v) { return Promise.resolve(f()).then(function () { return v; }); },
       function (e) { return Promise.resolve(f()).then(function () { throw e; }); });
