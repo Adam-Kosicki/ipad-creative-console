@@ -15,7 +15,8 @@ input, textarea, [contenteditable] { -webkit-user-select: text; user-select: tex
 img, svg { -webkit-user-drag: none; }
 
 /* Page swiping is done by ipad-pager.js with a GPU transform; the pager itself must not scroll natively. */
-#pager { overflow: visible !important; -webkit-scroll-snap-type: none; }
+#pager { display: block !important; overflow: visible !important; -webkit-scroll-snap-type: none; }
+#pager > .page { position: absolute; top: 0; left: 0; width: 100vw; -webkit-flex: none; flex: none; }
 
 /* The iPad 4's GPU: no blurs, glows, drop shadows or endless animations (each one repaints every frame). */
 *, *::before, *::after {

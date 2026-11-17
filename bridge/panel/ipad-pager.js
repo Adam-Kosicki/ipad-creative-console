@@ -19,10 +19,16 @@
   pager.style.overflow = 'visible';
   pager.scrollLeft = 0;
 
+  // Each page is its own absolutely positioned layer moved with translate3d. (One huge pager layer, 7 pages wide at
+  // retina resolution, was far too big for the iPad 4's GPU memory: swiping ran at ~12 fps.)
   function paint(x) {
-    var t = 'translate3d(' + (-Math.round(x)) + 'px,0,0)';
-    pager.style.webkitTransform = t;
-    pager.style.transform = t;
+    var w = W(), kids = pager.children, c = Math.round(x / w);
+    for (var i = 0; i < kids.length; i++) {
+      if (Math.abs(i - c) > 1) continue;
+      var t = 'translate3d(' + Math.round(i * w - x) + 'px,0,0)';
+      var st = kids[i].style;
+      st.webkitTransform = t; st.transform = t;
+    }
   }
   // Only the page in view and its two neighbours are painted.
   function cull(force) {
@@ -34,6 +40,7 @@
       var v = Math.abs(i - c) <= 1 ? '' : 'hidden';
       if (kids[i].style.visibility !== v) kids[i].style.visibility = v;
     }
+    paint(off);
   }
   var scrollEvent = function () {
     var e = document.createEvent('Event');
@@ -43,8 +50,8 @@
   function set(x, fromUser) {
     if (!fromUser && anim) { cancelAnimationFrame(anim); anim = 0; }
     off = x;
-    paint(x);
     cull();
+    paint(x);
     scrollEvent();
   }
   Object.defineProperty(pager, 'scrollLeft', {
