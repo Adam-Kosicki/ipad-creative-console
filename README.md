@@ -1,4 +1,4 @@
-# phone-ipad-macro-deck
+# ipad-creative-console
 
 Use an old iPad (or any old browser-only tablet) as a desk panel for your PC: a PC stats and media dashboard,
 shortcut buttons, Claude Code / Codex usage limits, and Allow/Deny prompts for Claude sessions. It is
