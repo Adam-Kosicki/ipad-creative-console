@@ -1,0 +1,42 @@
+name: TV Assistant APK
+
+on:
+  push:
+    paths:
+      - "tv-assistant/android/**"
+      - ".github/workflows/tv-assistant-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Build APK
+        run: gradle -p tv-assistant/android assembleRelease --no-daemon
+      - name: Rename APK
+        run: cp tv-assistant/android/app/build/outputs/apk/release/app-release.apk tv-assistant.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tv-assistant-apk
+          path: tv-assistant.apk
+      # A fixed pre-release so the PC can always download the newest build from one URL.
+      - name: Publish to the tv-assistant-latest pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view tv-assistant-latest >/dev/null 2>&1 || \
+            gh release create tv-assistant-latest --prerelease --title "TV Assistant (latest build)" \
+              --notes "Built automatically from ${GITHUB_REF_NAME}. Sideload with adb install -r tv-assistant.apk" \
+              --target "${GITHUB_SHA}"
+          gh release upload tv-assistant-latest tv-assistant.apk --clobber
