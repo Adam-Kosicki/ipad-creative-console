@@ -1,0 +1,138 @@
+// Builds an iOS 10 copy of PhoneBox's own panel UI into bridge/panel/.
+//
+//   npm i --no-save esbuild@0.24.2
+//   node scripts/build-panel.mjs <path to a phonebox clone>
+//
+// PhoneBox's panel (android/app/src/main/assets/www) is written for Chromium 80+: ES modules, ?. and ??,
+// container query units (cqw...), clamp()/min()/max() and pointer events. Safari 10.1 (iOS 10.3.3) has none of
+// these, so this script:
+//   - bundles main.js and its modules into one classic script, lowered to Safari 10 syntax (esbuild);
+//   - rewrites the CSS: cq units become calc(N * var(--cqw)), set at runtime by ipad-compat.js; clamp/min/max
+//     keep one argument; gap also emits grid-gap;
+//   - adds bridge/ipad-compat.js (polyfills) to index.html and drops the "WebView too old" guard.
+// The PhoneBox source is not modified; its MIT licence is copied next to the output.
+import { build, transform } from 'esbuild';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repo = process.argv[2];
+if (!repo) { console.error('usage: node scripts/build-panel.mjs <phonebox clone>'); process.exit(1); }
+const src = path.join(repo, 'android/app/src/main/assets/www');
+const out = path.join(here, '..', 'bridge', 'panel');
+// es2017, not 'safari10': esbuild refuses const for Safari 10 (an old loop-scoping bug), but the panel never hits it.
+// es2017 still lowers ?., ??, object spread, regex flags and the rest that Safari 10.1 lacks.
+const TARGET = 'es2017';
+
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(out, { recursive: true });
+
+// 1. JavaScript: one bundle for the module graph, classic scripts transformed one by one.
+await build({
+  entryPoints: [path.join(src, 'main.js')], bundle: true, format: 'iife', target: TARGET,
+  outfile: path.join(out, 'main.js'), legalComments: 'inline', logLevel: 'warning',
+  // window.onAgentStream etc. are assigned in the modules; nothing needs to be exported from the bundle.
+});
+for (const f of fs.readdirSync(src)) {
+  const p = path.join(src, f);
+  if (f === 'main.js' || fs.statSync(p).isDirectory()) continue;
+  if (f.endsWith('.js')) {
+    const code = fs.readFileSync(p, 'utf8');
+    // modules imported by main.js are inside the bundle already; only classic scripts are copied
+    if (/^\s*(import|export)\s/m.test(code)) continue;
+    fs.writeFileSync(path.join(out, f), (await transform(code, { target: TARGET, loader: 'js' })).code);
+  } else if (f.endsWith('.css')) {
+    const css = (await transform(fs.readFileSync(p, 'utf8'), { loader: 'css', target: TARGET })).code;
+    fs.writeFileSync(path.join(out, f), rewriteCss(css));
+  } else if (f !== 'index.html') {
+    fs.cpSync(p, path.join(out, f), { recursive: true });
+  }
+}
+// other assets the panel loads at runtime (images, fonts, widget html...), but not the widget modules
+for (const d of fs.readdirSync(src)) {
+  const p = path.join(src, d);
+  if (!fs.statSync(p).isDirectory()) continue;
+  fs.cpSync(p, path.join(out, d), { recursive: true, filter: (s) => !s.endsWith('.js') });
+}
+
+// 2. index.html
+let html = fs.readFileSync(path.join(src, 'index.html'), 'utf8');
+const guard = /var runs = 'noModule' in document\.createElement\('script'\);\s*try \{ new Function\([^\n]*\n/;
+if (!guard.test(html)) throw new Error('index.html: WebView guard not found, PhoneBox changed; update build-panel.mjs');
+html = html.replace(guard, 'var runs = true; return; // iPad build: syntax is lowered and cq units are polyfilled\n');
+const mod = '<script type="module" src="main.js"></script>';
+if (!html.includes(mod)) throw new Error('index.html: module script tag not found');
+html = html.replace(mod, '<script src="main.js"></script>');
+html = html.replace('<script src="compat.js"></script>', '<script src="ipad-compat.js"></script>\n<script src="compat.js"></script>');
+// iOS: full screen when added to the Home Screen
+html = html.replace('<title>', '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black">\n<title>');
+fs.writeFileSync(path.join(out, 'index.html'), html);
+
+// 3. Polyfills, with the selectors of the CSS containers baked in.
+const shim = fs.readFileSync(path.join(here, '..', 'bridge', 'ipad-compat.js'), 'utf8')
+  .replace('/*CONTAINERS*/[]', JSON.stringify([...containers]))
+  .replace('/*MATH*/[]', JSON.stringify(MATH.map((x) => [x.f, x.a])));
+fs.writeFileSync(path.join(out, 'ipad-compat.js'), shim);
+for (const f of ['LICENSE']) if (fs.existsSync(path.join(repo, f))) fs.copyFileSync(path.join(repo, f), path.join(out, 'PHONEBOX-LICENSE'));
+console.log('built', out, '· containers:', [...containers].join(', '), '· computed clamp/min/max:', MATH.length);
+
+// --- CSS rewriting ------------------------------------------------------------------------------------------------
+var containers;
+function rewriteCss(css) {
+  containers ??= new Set();
+  // selectors of rules that declare container-type: ipad-compat.js measures those elements
+  for (const m of css.matchAll(/([^{}]+)\{[^{}]*container-type\s*:/g)) for (const s of m[1].split(',')) containers.add(s.trim());
+  // blocks guarded by container-unit support: Safari 10 skips them and uses the fallback before them, so drop them
+  // here too (otherwise a browser with cq support, like the test Chromium, shows something the iPad never will)
+  css = css.replace(/@supports\s*\([^)]*\dcq[a-z]+\)\s*\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
+  css = lowerMath(css);
+  css = css.replace(/(-?\d*\.?\d+)cq(w|h|i|b|min|max)\b/g, (_, n, u) => {
+    const v = { w: 'cqw', i: 'cqw', h: 'cqh', b: 'cqh', min: 'cqmin', max: 'cqmax' }[u];
+    return `calc(${n} * var(--${v}, 1v${u === 'h' || u === 'b' ? 'h' : u === 'min' ? 'min' : u === 'max' ? 'max' : 'w'}))`;
+  });
+  // .a :is(b, c) {…}  ->  .a b, .a c {…}  (Safari 14+); one :is() per selector is all the panel uses
+  css = css.replace(/([^{}]*:is\([^{}]*)\{/g, (_, sels) => sels.split(/,(?![^(]*\))/).flatMap((s) => {
+    const m = /^(.*?):is\(([^()]*)\)(.*)$/s.exec(s.trim());
+    return m ? m[2].split(',').map((x) => m[1] + x.trim() + m[3]) : [s.trim()];
+  }).join(', ') + ' {');
+  css = css.replace(/(^|[;{\s])(row-|column-)?gap\s*:([^;}]+)/g, (m, pre, kind, val) =>
+    `${pre}grid-${kind || ''}gap:${val};${kind || ''}gap:${val}`);
+  return css;
+}
+
+// clamp()/min()/max() (Safari 11.1+). When every argument is a plain length (px, cq*, vw...), the declaration becomes
+// var(--pbmN, fallback) and ipad-compat.js computes --pbmN in px for every container from the MATH table.
+// Otherwise (env(), %, var()) one argument is kept: clamp's middle one, else the fluid one, else the first without env().
+var MATH; // (functions below run during the top-level build above, before later declarations would initialise)
+function lowerMath(css) {
+  MATH ??= [];
+  const SIMPLE = /^(-?\d*\.?\d+)(px|cqw|cqh|cqi|cqb|cqmin|cqmax|vw|vh|vmin|vmax)?$/;
+  const re = /(^|[^\w-])(clamp|min|max)\(/g;
+  let m;
+  while ((m = re.exec(css))) {
+    const start = m.index + m[1].length, open = start + m[2].length;
+    let depth = 0, i = open, args = [], last = open + 1;
+    for (; i < css.length; i++) {
+      const c = css[i];
+      if (c === '(') depth++;
+      else if (c === ')') { if (--depth === 0) { args.push(css.slice(last, i)); break; } }
+      else if (c === ',' && depth === 1) { args.push(css.slice(last, i)); last = i + 1; }
+    }
+    args = args.map((a) => a.trim());
+    let pick;
+    if (m[2] === 'clamp') pick = args[1];
+    else pick = args.find((a) => /cq|v[wh]|%/.test(a) && !/env\(/.test(a)) || args.find((a) => !/env\(/.test(a)) || args[0];
+    if (/[+\-*/]\s/.test(pick) && !/^calc\(/.test(pick)) pick = `calc(${pick})`;
+    const parsed = args.map((a) => SIMPLE.exec(a));
+    if (parsed.every(Boolean)) {
+      const key = m[2] + '(' + args.join(',') + ')';
+      let n = MATH.findIndex((x) => x.key === key);
+      if (n < 0) { n = MATH.length; MATH.push({ key, f: m[2], a: parsed.map((p) => [+p[1], p[2] || 'px']) }); }
+      pick = `var(--pbm${n}, ${pick})`;
+    }
+    css = css.slice(0, start) + pick + css.slice(i + 1);
+    re.lastIndex = start;
+  }
+  return css;
+}
