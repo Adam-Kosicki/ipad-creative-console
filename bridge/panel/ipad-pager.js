@@ -39,6 +39,8 @@
     for (var i = 0; i < kids.length; i++) {
       var v = Math.abs(i - c) <= 1 ? '' : 'hidden';
       if (kids[i].style.visibility !== v) kids[i].style.visibility = v;
+      // ipad.css hides the charts (canvases) of every page but the one in view: they are costly to composite
+      if (i === c) kids[i].classList.add('pbcur'); else kids[i].classList.remove('pbcur');
     }
     paint(off);
   }

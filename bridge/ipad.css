@@ -33,3 +33,14 @@ img, svg { -webkit-user-drag: none; }
 /* Disk meters (System > Memory): Safari 10 stretched every grid row to the card's free height. */
 .disks { -webkit-align-content: start; align-content: start; grid-auto-rows: -webkit-min-content; grid-auto-rows: min-content; }
 .disks > * { -webkit-align-self: start; align-self: start; }
+
+/* Performance (measured on the iPad 4: ~20 -> ~42 fps while swiping).
+   The background glow is a fixed full-screen layer in PhoneBox; as a plain body background it costs far less. */
+body::before { display: none !important; }
+body {
+  background-image:
+    radial-gradient(60% 80% at 78% 30%, rgba(var(--ambient), 0.16), transparent 70%),
+    radial-gradient(50% 60% at 10% 100%, rgba(var(--ambient), 0.06), transparent 70%);
+}
+/* Charts on pages that are not in view are not drawn (each canvas is its own GPU layer). */
+#pager > .page:not(.pbcur) canvas { visibility: hidden !important; }
