@@ -7,12 +7,14 @@ allow/deny, shortcuts) at `/panel/`, rebuilt so Safari 10 can run it.
 1. Install and start the PhoneBox agent: in PowerShell, `irm https://raw.githubusercontent.com/ersinkoc/phonebox/main/setup.ps1 | iex`.
    Skip the Android parts. Design your pages at <http://127.0.0.1:8765> (pick a 4:3 landscape-friendly layout).
 2. Install Node.js 18+ and clone this repo.
-3. Run `scripts/start-bridge.ps1`. It prints the iPad link, e.g. `http://<pc-ip>:8800/panel/?t=...`.
+3. Run `scripts/start-bridge.ps1`. It prints the iPad link, e.g. `http://<pc-ip>:8800/?t=...`.
    The token is saved in `bridge/.token`, so the link keeps working after restarts.
+   On a trusted home network, `scripts/start-bridge.ps1 -Open` skips the token for local devices, so the link is
+   just `http://<pc-ip>:8800` (anyone on that Wi-Fi can then use the panel, including Claude allow/deny).
 4. Allow port 8800 on the private network: `scripts/firewall.ps1` (as Administrator).
 
 ## iPad
-1. Open the printed `/panel/?t=...` link in Safari (use the PC's LAN IP, same Wi-Fi).
+1. Open the printed link in Safari (use the PC's LAN IP, same Wi-Fi).
 2. Share → **Add to Home Screen** for full screen.
 3. Swipe left/right to change pages.
 

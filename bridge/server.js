@@ -4,6 +4,8 @@
 //   /agent/*   the panel's API calls, forwarded to the PhoneBox agent on 127.0.0.1:8765 (only the paths the agent
 //              itself allows over Wi-Fi, see PhoneBox Lan.AllowedOverLan)
 // Every request needs the token: ?t=<token> once, after which a cookie carries it.
+// BRIDGE_OPEN_LAN=1 drops the token for devices on the local network (private IPs only), so the iPad link is just
+// http://<pc-ip>:8800. Anyone on that Wi-Fi can then use the panel, including Claude allow/deny.
 var http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), url = require('url');
 var PORT = parseInt(process.env.BRIDGE_PORT || '8800', 10);
 var AGENT_HOST = process.env.AGENT_HOST || '127.0.0.1';
@@ -16,6 +18,7 @@ var TOKEN = process.env.BRIDGE_TOKEN || (function () {
   try { fs.writeFileSync(TOKEN_FILE, n + '\n', { mode: 384 }); } catch (_) {}
   return n;
 })();
+var OPEN_LAN = process.env.BRIDGE_OPEN_LAN === '1';
 var PAGE = path.join(__dirname, 'index.html');
 var PANEL = path.join(__dirname, 'panel');
 // What the agent sees: a phone named "iPad", so it queues Claude approvals and lists the device in its settings.
@@ -59,6 +62,10 @@ function cookie(req, name) {
   var m = new RegExp('(?:^|;\\s*)' + name + '=([^;]*)').exec(req.headers.cookie || '');
   return m ? decodeURIComponent(m[1]) : null;
 }
+function privateIp(ip) {
+  ip = String(ip || '').replace(/^::ffff:/, '');
+  return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(ip) || ip === '::1' || /^f[cd]|^fe80:/i.test(ip);
+}
 function same(a, b) {
   a = Buffer.from(String(a || '')); b = Buffer.from(String(b));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -96,11 +103,14 @@ function serveStatic(res, root, rel) {
 http.createServer(function (req, res) {
   var u = url.parse(req.url, true);
   var viaQuery = same(u.query.t, TOKEN);
-  if (!viaQuery && !same(cookie(req, 'bt'), TOKEN)) return send(res, 403, 'text/plain', 'forbidden: open the URL with ?t=<token>');
+  var lanOk = OPEN_LAN && privateIp(req.socket.remoteAddress);
+  if (!viaQuery && !lanOk && !same(cookie(req, 'bt'), TOKEN)) return send(res, 403, 'text/plain', 'forbidden: open the URL with ?t=<token>');
   var setCookie = viaQuery ? { 'Set-Cookie': 'bt=' + encodeURIComponent(TOKEN) + '; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict' } : null;
   var p = u.pathname;
 
-  if (p === '/') return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(PAGE), setCookie);
+  // the short link: http://<pc-ip>:8800 opens the panel; the simple approvals page is at /simple
+  if (p === '/') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
+  if (p === '/simple') return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(PAGE), setCookie);
   if (p === '/panel') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie && setCookie['Set-Cookie'] });
   if (p.indexOf('/panel/') === 0) {
     if (setCookie && p === '/panel/') return send(res, 302, 'text/plain', '', { Location: '/panel/', 'Set-Cookie': setCookie['Set-Cookie'] });
@@ -128,7 +138,11 @@ http.createServer(function (req, res) {
     });
   }
 }).listen(PORT, '0.0.0.0', function () {
-  console.log('On the iPad, open one of:');
-  console.log('  full PhoneBox panel:  http://<pc-ip>:' + PORT + '/panel/?t=' + TOKEN);
-  console.log('  simple approvals:     http://<pc-ip>:' + PORT + '/?t=' + TOKEN);
+  var ips = [], nets = require('os').networkInterfaces();
+  for (var n in nets) nets[n].forEach(function (a) { if (a.family === 'IPv4' && !a.internal && privateIp(a.address)) ips.push(a.address); });
+  var host = ips[0] || '<pc-ip>';
+  console.log('On the iPad, open:');
+  if (OPEN_LAN) console.log('  http://' + host + ':' + PORT + '      (no token needed on this network)');
+  else console.log('  http://' + host + ':' + PORT + '/?t=' + TOKEN);
+  console.log('  (simple approvals page: /simple)' + (ips.length > 1 ? '   other addresses of this PC: ' + ips.slice(1).join(', ') : ''));
 });
