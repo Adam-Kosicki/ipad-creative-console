@@ -53,7 +53,9 @@ public class AssistantService extends Service {
     private static final int RATE = 16000;
     private static final int CHUNK_MS = 80;
     private static final int MAX_WAIT_FOR_SPEECH_MS = 5000;
-    private static final int END_SILENCE_MS = 900;
+    private static final int END_SILENCE_MS = 1200;
+    private static final int IGNORE_START_MS = 700;   // tail of "Hey Jarvis" + the listening beep
+    private static final int MIN_REQUEST_MS = 2500;
     private static final int MAX_REQUEST_MS = 12000;
 
     private Prefs prefs;
@@ -213,6 +215,7 @@ public class AssistantService extends Service {
                     requestLen += chunk.length;
                     sinceStartMs += CHUNK_MS;
                     boolean speech = rms > Math.max(noise * 2.5f, 35f * gain);
+                    if (sinceStartMs <= IGNORE_START_MS) speech = false;
                     if (speech) { heardSpeech = true; quietMs = 0; } else quietMs += CHUNK_MS;
                     boolean full = requestLen + chunk.length > request.length;
                     if (!heardSpeech && sinceStartMs >= MAX_WAIT_FOR_SPEECH_MS) {
@@ -220,7 +223,8 @@ public class AssistantService extends Service {
                         beep(ToneGenerator.TONE_PROP_NACK);
                         overlay.hide();
                         finishTurn();
-                    } else if ((heardSpeech && quietMs >= END_SILENCE_MS) || full) {
+                    } else if ((heardSpeech && quietMs >= END_SILENCE_MS && sinceStartMs >= MIN_REQUEST_MS) || full) {
+                        Log.i(TAG, "request recorded: " + sinceStartMs + " ms");
                         state = State.THINKING;
                         overlay.show("Thinking…", 0);
                         final byte[] wav = Wav.fromPcm(request, requestLen);
