@@ -136,7 +136,8 @@ public class AssistantService extends Service {
         try {
             wake = new WakeWord(this, "hey_jarvis_v0.1");
             int min = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO,
+            Log.i(TAG, "mic source " + prefs.source() + ", gain " + prefs.gain());
+            rec = new AudioRecord(prefs.source(), RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, Math.max(min, RATE * 2));
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) throw new IllegalStateException("mic would not open");
             rec.startRecording();
@@ -163,6 +164,13 @@ public class AssistantService extends Service {
                 got += n;
             }
             if (got < chunk.length) continue;
+            float gain = prefs.gain();
+            if (gain != 1f) {
+                for (int i = 0; i < chunk.length; i++) {
+                    float v = chunk[i] * gain;
+                    chunk[i] = (short) (v > 32767 ? 32767 : (v < -32768 ? -32768 : v));
+                }
+            }
 
             float rms = rms(chunk);
             level = rms;
@@ -197,7 +205,7 @@ public class AssistantService extends Service {
                     System.arraycopy(chunk, 0, request, requestLen, chunk.length);
                     requestLen += chunk.length;
                     sinceStartMs += CHUNK_MS;
-                    boolean speech = rms > Math.max(noise * 2.5f, 35f);
+                    boolean speech = rms > Math.max(noise * 2.5f, 35f * gain);
                     if (speech) { heardSpeech = true; quietMs = 0; } else quietMs += CHUNK_MS;
                     boolean full = requestLen + chunk.length > request.length;
                     if (!heardSpeech && sinceStartMs >= MAX_WAIT_FOR_SPEECH_MS) {

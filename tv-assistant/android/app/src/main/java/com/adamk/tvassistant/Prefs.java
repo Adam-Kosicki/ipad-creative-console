@@ -13,6 +13,12 @@ final class Prefs {
     String token() { return p.getString("token", ""); }
     float threshold() { return p.getFloat("threshold", 0.5f); }
     boolean wakeEnabled() { return p.getBoolean("wake", true); }
+    /** Digital gain on the mic. The Sony far-field mic is very quiet (speech ~ -50 dBFS). */
+    float gain() { return p.getFloat("gain", 8f); }
+    /** MediaRecorder.AudioSource: 6 = VOICE_RECOGNITION (default), 1 = MIC, 7 = VOICE_COMMUNICATION, 9 = UNPROCESSED. */
+    int source() { return p.getInt("source", 6); }
+    void setGain(float g) { p.edit().putFloat("gain", g).apply(); }
+    void setSource(int s) { p.edit().putInt("source", s).apply(); }
 
     void set(String bridge, String token, Float threshold, Boolean wake) {
         SharedPreferences.Editor e = p.edit();
