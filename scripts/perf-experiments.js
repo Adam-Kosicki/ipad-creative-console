@@ -3,6 +3,9 @@
 (function () {
   var EXPS = [
     ['base', ''],
+    ['nothing-at-all', '#pager,#dots,#ptitle{display:none!important}body::before{display:none!important}'],
+    ['no-body-glow', 'body::before{display:none!important}'],
+    ['no-body-glow+no-bg', 'body::before{display:none!important}*{background-image:none!important}'],
     ['no-canvas', 'canvas{display:none!important}'],
     ['no-bg-gradients', '*{background-image:none!important}'],
     ['no-radius', '*{border-radius:0!important}'],
