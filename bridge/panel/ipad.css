@@ -1,0 +1,46 @@
+/* Native feel on iPad (iOS 10, Home Screen web app). Loaded after PhoneBox's own CSS by the iPad build. */
+
+/* The page itself never scrolls or rubber-bands: only the pager (and widgets that scroll) move. */
+html, body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
+
+/* No text selection, long-press callouts, grey tap flashes or double-tap zoom; taps fire without delay. */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  touch-action: manipulation;
+}
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+img, svg { -webkit-user-drag: none; }
+
+/* Page swiping is done by ipad-pager.js with a GPU transform; the pager itself must not scroll natively. */
+#pager { display: block !important; overflow: visible !important; -webkit-scroll-snap-type: none; }
+#pager > .page { position: absolute; top: 0; left: 0; width: 100vw; -webkit-flex: none; flex: none; }
+
+/* The iPad 4's GPU: no blurs, glows, drop shadows or endless animations (each one repaints every frame). */
+*, *::before, *::after {
+  -webkit-filter: none !important; filter: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  box-shadow: none !important; text-shadow: none !important;
+  -webkit-animation: none !important; animation: none !important;
+}
+#pager.fade { opacity: 0; }
+
+/* Lists inside widgets keep native momentum scrolling. */
+.s-list, .ps-list, .ap-detail, #ovGrid { -webkit-overflow-scrolling: touch; }
+
+/* Disk meters (System > Memory): Safari 10 stretched every grid row to the card's free height. */
+.disks { -webkit-align-content: start; align-content: start; grid-auto-rows: -webkit-min-content; grid-auto-rows: min-content; }
+.disks > * { -webkit-align-self: start; align-self: start; }
+
+/* Performance (measured on the iPad 4: ~20 -> ~42 fps while swiping).
+   The background glow is a fixed full-screen layer in PhoneBox; as a plain body background it costs far less. */
+body::before { display: none !important; }
+body {
+  background-image:
+    radial-gradient(60% 80% at 78% 30%, rgba(var(--ambient), 0.16), transparent 70%),
+    radial-gradient(50% 60% at 10% 100%, rgba(var(--ambient), 0.06), transparent 70%);
+}
+/* Charts on pages that are not in view are not drawn (each canvas is its own GPU layer). */
+#pager > .page:not(.pbcur) canvas { visibility: hidden !important; }
