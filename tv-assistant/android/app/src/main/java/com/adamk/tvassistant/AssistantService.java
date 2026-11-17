@@ -74,7 +74,7 @@ public class AssistantService extends Service {
     static void heard(String text) {
         lastHeard = text;
         AssistantService s = instance;
-        if (s != null && state == State.THINKING) s.overlay.show("You said: \"" + text + "\"\n\nThinking…", 0);
+        if (s != null && state == State.THINKING) s.overlay.show(text, 0);
     }
 
     static void start(Context c) {
@@ -295,14 +295,14 @@ public class AssistantService extends Service {
         stt.listen(new GoogleStt.Callback() {
             @Override public void onPartial(String text) {
                 lastHeard = text;
-                overlay.show("You: " + text + " …", 0);
+                overlay.show(text, 0);
             }
 
             @Override public void onDone(String text, int error, boolean unavailable) {
                 if (text != null) {
                     lastHeard = text;
                     state = State.THINKING;
-                    overlay.show("You said: \"" + text + "\"\n\nThinking…", 0);
+                    overlay.show(text, 0);
                     micLent = false;
                     worker.submit(() -> ask(null, text));
                     return;
@@ -358,7 +358,7 @@ public class AssistantService extends Service {
             lastReply = text;
             lastError = "";
             state = State.SPEAKING;
-            overlay.show(lastHeard.isEmpty() ? text : "You said: \"" + lastHeard + "\"\n\n" + text, 0);
+            overlay.show(lastHeard.isEmpty() ? text : lastHeard + "\n\n" + text, 0);
             JSONArray audioUrls = r.optJSONArray("audio");
             JSONArray audioFiles = r.optJSONArray("audio_files");
             boolean played = false;
