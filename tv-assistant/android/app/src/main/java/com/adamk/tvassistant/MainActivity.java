@@ -88,6 +88,10 @@ public class MainActivity extends Activity {
             AssistantService.start(this);
         }
         handler.post(refresh);
+        if (getIntent().getBooleanExtra("background_start", false)) {
+            // Started at boot or after an update just to get mic access: get out of the way.
+            handler.postDelayed(() -> moveTaskToBack(true), 2000);
+        }
     }
 
     @Override
