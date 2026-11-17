@@ -302,7 +302,7 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                 if name == "delta.message_done":
                     message_done = True
             replies = [r for r in turn.replies.values() if r.text.strip()]
-            if replies and not turn.complete(time.monotonic()) and pump_task is not None:
+            if replies and pump_task is not None:
                 # Muse may send more messages (e.g. after a tool call): keep listening and speak them too.
                 _follower = asyncio.ensure_future(
                     _follow_rest(turn, queue, pump_task, {r.message_id for r in replies}))
@@ -355,20 +355,34 @@ def _show_heard(text: str) -> None:
         log.exception("could not show the transcription")
 
 
+FOLLOW_UP_S = 300  # keep listening this long after the last Muse activity for slow follow-ups
+
+
 async def _follow_rest(turn, queue: asyncio.Queue, pump_task, spoken: set) -> None:
-    """After the first answer is spoken, speak any further messages Muse sends for the same request."""
-    started = time.monotonic()
+    """After the first answer is spoken, speak every further message Muse sends on the TV's chat.
+
+    Muse often answers in two steps ("On it…", then the result after a tool runs), and the
+    second can come a while later, after the turn looks finished. So this keeps listening until
+    Muse has been quiet for FOLLOW_UP_S seconds, or the next request starts.
+    """
+    log.info("following Muse's further messages (up to %ss of quiet)", FOLLOW_UP_S)
+    last = time.monotonic()
+    reason = "quiet"
     try:
-        while True:
-            now = time.monotonic()
-            if turn.complete(now) or turn.settled(now) or now - started > ASK_TIMEOUT_S:
-                break
+        while time.monotonic() - last < FOLLOW_UP_S:
             try:
-                event = await asyncio.wait_for(queue.get(), 0.25)
+                event = await asyncio.wait_for(queue.get(), 1.0)
             except asyncio.TimeoutError:
+                if pump_task.done():
+                    reason = "subscription closed"
+                    break
                 continue
+            last = time.monotonic()
             name = event.get("event")
-            if name not in ("delta.text_append",):
+            payload = event.get("payload") or {}
+            if name == "task.status":
+                log.info("chat event task.status %s (follow-up)", payload.get("status"))
+            elif name not in ("delta.text_append",):
                 log.info("chat event %s (follow-up)", name)
             turn.feed(event)
             for reply in list(turn.replies.values()):
@@ -377,10 +391,12 @@ async def _follow_rest(turn, queue: asyncio.Queue, pump_task, spoken: set) -> No
                     log.info("speaking a further Muse message")
                     _host.say(reply.text.strip())
     except asyncio.CancelledError:
-        pass
+        reason = "next request"
     except Exception:
+        reason = "error"
         log.exception("following Muse's further messages failed")
     finally:
+        log.info("stopped following Muse (%s)", reason)
         pump_task.cancel()
         try:
             turn.retire()
