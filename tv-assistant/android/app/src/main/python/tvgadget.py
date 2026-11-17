@@ -22,11 +22,35 @@ from datetime import datetime, timedelta
 log = logging.getLogger("tvgadget")
 
 ASK_TIMEOUT_S = 120
-VOICE_HINT = (
-    "[Spoken to the living-room TV (the TV gadget). Answer in one to three short spoken sentences, "
-    "no markdown or lists. For timers, alarms, making the TV speak, volume, media keys or opening TV "
-    "apps, use the tv.* commands on the TV gadget.]"
-)
+# The device's usage guide, which Muse reads through device.guide (the SDK's way to tell Muse how
+# to use a gadget; at most 4096 bytes). Requests go out with output_modality="voice", so nothing is
+# added to what the user says.
+DEVICE_GUIDE = """# Living room TV
+
+A Sony Google TV in the living room, running the TV Assistant app. The owner talks to it:
+"Hey Jarvis", then a request. The TV sends what they said to Muse and reads Muse's answer
+out loud in its own voice.
+
+## Answering requests from this TV
+
+- Every message from this gadget was spoken out loud at the TV, and the answer is read
+  aloud. Answer in one to three short spoken sentences, with no markdown, lists or links.
+- If a task takes a while, say so briefly, then send the result as its own message: the TV
+  speaks every message on its chat.
+
+## Its commands
+
+- tv.open_app and tv.youtube open apps and YouTube videos or searches on this TV.
+- tv.volume, tv.media and tv.home control the TV like its remote.
+- tv.say speaks a sentence on the TV right away.
+- tv.set_timer, tv.set_alarm, tv.list_timers and tv.cancel_timer manage timers that ring
+  on the TV.
+
+## Limits
+
+- No screenshots, and no reading what is on screen or which app is in front.
+- It can't install apps, and can't turn the TV on once it is off.
+"""
 
 _state = {"paired": False, "connected": False, "pairing": "", "ble_name": "", "error": ""}
 _host = None
@@ -256,9 +280,9 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                     _scope.observe_idle(queue.get_nowait(), sid)
             log.info("sending %s to Muse", "a voice note" if wav else "text")
             if wav:
-                resp = await session.send_voice(wav, sid, message=VOICE_HINT, output_modality="voice")
+                resp = await session.send_voice(wav, sid, output_modality="voice")
             else:
-                resp = await session.send_chat(f"{VOICE_HINT}\n\n{text}", sid, output_modality="voice")
+                resp = await session.send_chat(text, sid, output_modality="voice")
             log.info("Muse acknowledged: ok=%s status=%s", resp.get("ok"), resp.get("status"))
             if not resp.get("ok"):
                 log.warning("Muse refused the request: %s", resp)
@@ -339,9 +363,6 @@ def _user_text(event: dict) -> str:
         value = payload.get(key)
         if isinstance(value, str):
             text = value.strip()
-            # Drop the instructions we send with every request.
-            if text.startswith(VOICE_HINT.strip()):
-                text = text[len(VOICE_HINT.strip()):].strip()
             if text:
                 return text
     log.info("message.user without text; keys: %s", sorted(payload))
@@ -448,6 +469,7 @@ TV_COMMAND_SPECS = {
     },
     "tv.home": {"description": "Go to the TV's home screen."},
     "device.health": {"description": "Report the TV gadget's state: time, timers waiting, app version."},
+    "device.guide": {"description": "This device's usage guide (Markdown): what it is, how to answer it, its controls and limits."},
 }
 
 
@@ -543,6 +565,8 @@ class TvExecutor:
         if command == "tv.home":
             host.goHome()
             return _ok({"home": True})
+        if command == "device.guide":
+            return _ok({"format": "markdown", "guide": DEVICE_GUIDE})
         if command == "device.health":
             return _ok({"time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "timers": json.loads(str(host.listTimers())), "app": "TV Assistant"})
