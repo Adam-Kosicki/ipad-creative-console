@@ -178,6 +178,10 @@ def pair() -> None:
     threading.Thread(target=run, name="muse-pair", daemon=True).start()
 
 
+# Speak Muse's text in the TV's own voice right away instead of waiting for Muse's audio.
+FAST_SPEECH = True
+
+
 def ask(wav: bytes, text: str = "") -> str:
     """Send a voice note (or text) to Muse and wait for the answer. Returns JSON."""
     if _loop is None:
@@ -267,10 +271,14 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                 turn = MuseTurn(sid)
                 turn.acknowledge(ack)
             started = time.monotonic()
+            message_done = False
             while True:
                 now = time.monotonic()
                 has_text = any(r.text.strip() for r in turn.replies.values())
-                if (has_text and turn.complete(now)) or turn.settled(now) or now - started > ASK_TIMEOUT_S:
+                # Speak as soon as Muse's first message is finished; tool calls still run on their own.
+                if has_text and (message_done or turn.complete(now)):
+                    break
+                if turn.settled(now) or now - started > ASK_TIMEOUT_S:
                     break
                 try:
                     event = await asyncio.wait_for(queue.get(), 0.25)
@@ -279,6 +287,8 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                 if event.get("event") not in ("delta.text_append",):
                     log.info("chat event %s", event.get("event"))
                 turn.feed(event)
+                if event.get("event") == "delta.message_done":
+                    message_done = True
             turn.retire()
         finally:
             if pump_task is not None:
@@ -286,7 +296,7 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
 
         replies = [r for r in turn.replies.values() if r.text.strip()]
         files = []
-        for reply in replies:
+        for reply in replies if not FAST_SPEECH else []:
             try:
                 mp3 = bytearray()
                 async for chunk in session.stream_tts(reply.message_id):

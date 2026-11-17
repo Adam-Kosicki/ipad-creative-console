@@ -62,4 +62,4 @@ def test_ask_flow(tmp_path):
     session = S()
     tvgadget._service = types.SimpleNamespace(_current=session)
     out = json.loads(tvgadget.ask(b"RIFFdata"))
-    assert out["ok"] and out["text"] == "Done, timer set." and open(out["audio_files"][0], "rb").read() == b"ID3xx"
+    assert out["ok"] and out["text"] == "Done, timer set." and out["audio_files"] == []  # FAST_SPEECH: TV voice
