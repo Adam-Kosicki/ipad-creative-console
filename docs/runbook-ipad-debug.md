@@ -25,6 +25,9 @@ So errors on the iPad can be read and fixed from the PC (or by Claude) without p
 
 On the iPad page, `__dbg.tap('#selector')`, `__dbg.tap(x, y)` and `__dbg.swipe(x1, y1, x2, y2, ms)` press and swipe without a finger (real touch events on iOS).
 
+## Screenshots over Wi-Fi (no USB)
+`node scripts/ipad-shot.js [out.png]` renders the iPad page inside Safari (html2canvas, loaded from cdnjs) and saves a PNG. A re-drawing of the DOM, close but not pixel-exact.
+
 ## Screenshots over USB
 Needs the iPad on USB and trusted, Apple's USB driver (install iTunes or the Apple Devices app), and `pymobiledevice3` (`pip install --user pymobiledevice3`). First time: `python -m pymobiledevice3 mounter auto-mount`.
 Without `DEBUG_SCREENSHOT_CMD` the proxy tries `pymobiledevice3 developer screenshot` (also via Python 3.11 / `py` / `python -m`). Set `DEBUG_SCREENSHOT_CMD` (with `{out}` for the file path) to force one.
