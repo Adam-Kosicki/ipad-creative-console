@@ -213,24 +213,51 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
         if _scope is None:
             _scope = ReplayScope()
         queue: asyncio.Queue = asyncio.Queue()
+        pump_task = None
 
-        async def pump():
-            async for event in session.subscribe_chat(sid):
-                queue.put_nowait(event)
+        async def subscribe(target, wait_s):
+            """Open Muse's chat event stream; True once the server confirms it."""
+            nonlocal pump_task
 
-        pump_task = asyncio.create_task(pump())
+            async def pump():
+                async for event in session.subscribe_chat(target):
+                    queue.put_nowait(event)
+
+            session.chat_subscribed.clear()
+            task = asyncio.create_task(pump())
+            task.add_done_callback(lambda t: t.cancelled() or not t.exception() or log.warning(
+                "chat subscription (%s) ended: %r", target or "main chat", t.exception()))
+            try:
+                await asyncio.wait_for(session.chat_subscribed.wait(), wait_s)
+                pump_task = task
+                log.info("subscribed to %s", target or "the main chat")
+                return True
+            except asyncio.TimeoutError:
+                log.warning("chat subscription (%s) not confirmed after %ss", target or "main chat", wait_s)
+                task.cancel()
+                return False
+
         try:
-            await asyncio.wait_for(session.chat_subscribed.wait(), 15)
-            await asyncio.sleep(0.3)
-            while not queue.empty():
-                _scope.observe_idle(queue.get_nowait(), sid)
+            # A brand-new side chat may not accept a subscription until its first message exists,
+            # so try it first, and otherwise send and subscribe right after (Muse replays the turn).
+            subscribed = await subscribe(sid, 6)
+            if subscribed:
+                await asyncio.sleep(0.3)
+                while not queue.empty():
+                    _scope.observe_idle(queue.get_nowait(), sid)
+            log.info("sending %s to Muse", "a voice note" if wav else "text")
             if wav:
                 resp = await session.send_voice(wav, sid, message=VOICE_HINT, output_modality="voice")
             else:
                 resp = await session.send_chat(f"{VOICE_HINT}\n\n{text}", sid, output_modality="voice")
+            log.info("Muse acknowledged: ok=%s status=%s", resp.get("ok"), resp.get("status"))
             if not resp.get("ok"):
                 log.warning("Muse refused the request: %s", resp)
                 return {"ok": False, "error": f"Muse said HTTP {resp.get('status')}."}
+            if not subscribed:
+                subscribed = await subscribe(sid, 15) or await subscribe(None, 15)
+            if not subscribed:
+                return {"ok": False, "error": "I sent it to Muse but can't hear the answer. Check the Muse app."}
             ack = resp.get("response") or {}
             try:
                 turn = MuseTurn(sid, owns_chat=True, replay_scope=_scope)
@@ -249,10 +276,13 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                     event = await asyncio.wait_for(queue.get(), 0.25)
                 except asyncio.TimeoutError:
                     continue
+                if event.get("event") not in ("delta.text_append",):
+                    log.info("chat event %s", event.get("event"))
                 turn.feed(event)
             turn.retire()
         finally:
-            pump_task.cancel()
+            if pump_task is not None:
+                pump_task.cancel()
 
         replies = [r for r in turn.replies.values() if r.text.strip()]
         files = []

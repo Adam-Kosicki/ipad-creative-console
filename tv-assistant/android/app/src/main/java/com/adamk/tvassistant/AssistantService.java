@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 public class AssistantService extends Service {
     static final String TAG = "TvAssistant";
     static final String ACTION_TALK = "com.adamk.tvassistant.TALK";
+    static final String ACTION_ASK_TEXT = "com.adamk.tvassistant.ASK_TEXT";
     static final String ACTION_STOP_ALARM = "com.adamk.tvassistant.STOP_ALARM";
 
     enum State { STARTING, IDLE, LISTENING, THINKING, SPEAKING, ALARM, NO_MIC }
@@ -100,6 +101,12 @@ public class AssistantService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_TALK.equals(intent.getAction())) talkRequested = true;
+        if (intent != null && ACTION_ASK_TEXT.equals(intent.getAction())) {
+            String text = intent.getStringExtra("text");
+            state = State.THINKING;
+            overlay.show("Thinking…", 0);
+            worker.submit(() -> ask(null, text));
+        }
         if (intent != null && ACTION_STOP_ALARM.equals(intent.getAction())) AlarmActivity.stopAll();
         return START_STICKY;
     }
@@ -217,7 +224,7 @@ public class AssistantService extends Service {
                         state = State.THINKING;
                         overlay.show("Thinking…", 0);
                         final byte[] wav = Wav.fromPcm(request, requestLen);
-                        worker.submit(() -> ask(wav));
+                        worker.submit(() -> ask(wav, null));
                     }
                     break;
                 case ALARM:
@@ -250,15 +257,15 @@ public class AssistantService extends Service {
 
     // -- Asking Muse through the Pi --------------------------------------------
 
-    private void ask(byte[] wav) {
+    private void ask(byte[] wav, String text) {
         BridgeClient bridge = new BridgeClient(prefs.bridge(), prefs.token());
         boolean usePi = !prefs.bridge().isEmpty();
         try {
             JSONObject r;
-            if (usePi) {
+            if (usePi && wav != null) {
                 r = bridge.ask(wav);
             } else if (Muse.ready()) {
-                r = Muse.ask(wav); // the TV itself is the Muse device
+                r = wav != null ? Muse.ask(wav) : Muse.askText(text); // the TV itself is the Muse device
             } else {
                 say("I'm still starting up. Try again in a moment.");
                 return;

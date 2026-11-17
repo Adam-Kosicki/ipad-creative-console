@@ -106,6 +106,11 @@ public class MainActivity extends Activity {
         if (i.getBooleanExtra("pair", false)) {
             new Thread(() -> { Muse.init(this, t -> { }); Muse.pair(); }).start();
         }
+        String askText = i.getStringExtra("ask_text");
+        if (askText != null) {
+            startService(new Intent(this, AssistantService.class)
+                    .setAction(AssistantService.ACTION_ASK_TEXT).putExtra("text", askText));
+        }
         String imported = i.getStringExtra("import_pairing");
         if (imported != null) {
             new Thread(() -> {
