@@ -197,7 +197,7 @@ public class AssistantService extends Service {
                     System.arraycopy(chunk, 0, request, requestLen, chunk.length);
                     requestLen += chunk.length;
                     sinceStartMs += CHUNK_MS;
-                    boolean speech = rms > Math.max(noise * 2.5f, 250f);
+                    boolean speech = rms > Math.max(noise * 2.5f, 35f);
                     if (speech) { heardSpeech = true; quietMs = 0; } else quietMs += CHUNK_MS;
                     boolean full = requestLen + chunk.length > request.length;
                     if (!heardSpeech && sinceStartMs >= MAX_WAIT_FOR_SPEECH_MS) {
