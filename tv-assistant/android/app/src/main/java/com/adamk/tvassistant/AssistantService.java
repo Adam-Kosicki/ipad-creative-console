@@ -92,7 +92,13 @@ public class AssistantService extends Service {
         startForeground(1, notification());
         tts = new TextToSpeech(this, s -> {
             ttsReady = s == TextToSpeech.SUCCESS;
-            if (ttsReady) tts.setLanguage(Locale.US);
+            if (ttsReady) {
+                tts.setLanguage(Locale.US);
+                // Play replies at the TV's normal volume (the Assistant volume is often very low).
+                tts.setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
+            }
         });
         running = true;
         new Thread(() -> {
@@ -395,7 +401,7 @@ public class AssistantService extends Service {
         MediaPlayer mp = new MediaPlayer();
         try {
             mp.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
             mp.setDataSource(file.getAbsolutePath());
             mp.setOnCompletionListener(m -> done.countDown());
@@ -429,7 +435,7 @@ public class AssistantService extends Service {
         MediaPlayer mp = new MediaPlayer();
         try {
             mp.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
             mp.setDataSource(this, Uri.parse(bridge.url(path)), Collections.singletonMap("X-Token", bridge.token()));
             mp.setOnCompletionListener(m -> done.countDown());
