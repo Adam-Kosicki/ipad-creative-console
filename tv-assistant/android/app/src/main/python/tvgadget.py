@@ -38,6 +38,10 @@ out loud in its own voice.
 - If a task takes a while, say so briefly, then send the result as its own message: the TV
   speaks every message on its chat.
 
+## Other devices
+
+- PC actions go through the agent-desktop connector (custom.agent-desktop). The PC is reachable from this chat. Don't use your own cloud browser for PC requests.
+
 ## Its commands
 
 - tv.open_app and tv.youtube open apps and YouTube videos or searches on this TV.
