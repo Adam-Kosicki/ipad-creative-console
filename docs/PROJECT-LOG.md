@@ -33,6 +33,7 @@
 - Always-on Mac server / Mac node later.
 - Check iPad models.
 - Real-finger swipe benchmark on iPad (bench via :8801 debug proxy) when charged.
+- TV playback: Muse should play videos directly, using ADB launch with the video ID, never asking Adam to tap. A saved rule is being taught to Muse; verify it works.
 - Research options (nothing built): TV as extra monitor (Apollo + Moonlight), Muse coding on PC (enable Windows-MCP PowerShell), Tailscale app on TV for direct Muse access.
 
 ## Notes
