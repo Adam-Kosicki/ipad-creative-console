@@ -171,6 +171,7 @@ def _run_service(ready: threading.Event) -> None:
     _service = service_mod.Service(identity=identity.load_or_create(), executor=TvExecutor(),
                                    sdk_token=sdk_token, display_name="Living room TV")
     ready.set()
+    _loop.create_task(_watch_main_chat())
     while True:  # Service.run returns only when stopped; restart it if it ever dies
         try:
             _loop.run_until_complete(_service.run())
@@ -467,6 +468,29 @@ def _emit_status(event: dict) -> None:
         _host.status(phase, text or "")
     except Exception:
         log.exception("could not show Muse's status")
+
+
+async def _watch_main_chat() -> None:
+    """Always listen to Muse's main chat so the TV shows status even for work the TV didn't start
+    (from the Muse app, muse-cli, a cron). Reconnects forever."""
+    log.info("main-chat status watcher started")
+    while True:
+        try:
+            session = getattr(_service, "_current", None)
+            if session is None or session.registered_at is None:
+                await asyncio.sleep(3)
+                continue
+            log.info("watcher: subscribing to the main chat")
+            async for event in session.subscribe_chat(None):
+                if event.get("event") != "delta.text_append":
+                    log.info("watch event %s", event.get("event"))
+                _emit_status(event)
+            log.info("watcher: stream ended")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.info("watcher: %s: %s", type(exc).__name__, exc)
+        await asyncio.sleep(3)
 
 
 def decide(approval_id: str, decision: str) -> str:
