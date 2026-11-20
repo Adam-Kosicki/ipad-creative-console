@@ -496,6 +496,13 @@ async def _watch_main_chat() -> None:
         await asyncio.sleep(3)
 
 
+def stop_following() -> None:
+    """The viewer interrupted: stop speaking Muse's further messages."""
+    f = _follower
+    if f is not None and _loop is not None:
+        _loop.call_soon_threadsafe(f.cancel)
+
+
 def decide(approval_id: str, decision: str) -> str:
     """Approve or deny a pending Muse approval from the TV remote. Returns JSON."""
     if _loop is None:
