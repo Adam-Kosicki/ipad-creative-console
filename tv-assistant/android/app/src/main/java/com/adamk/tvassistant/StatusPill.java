@@ -1,19 +1,9 @@
 package com.adamk.tvassistant;
 
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.PixelFormat;
-import android.graphics.drawable.GradientDrawable;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
-import android.provider.Settings;
-import android.view.Gravity;
-import android.view.WindowManager;
-import android.widget.TextView;
 
 /**
- * A status pill at the top-left of the TV: what Muse is doing right now, with a colour per phase
+ * The status part of the shared MuseBar card: what Muse is doing right now, with a colour per phase
  * and a running timer, so it is always clear whether Muse is listening, thinking, working,
  * waiting for the viewer, or finished.
  */
@@ -26,77 +16,14 @@ final class StatusPill {
         Phase(String label, int color) { this.label = label; this.color = color; }
     }
 
-    private final Context context;
-    private final Handler main = new Handler(Looper.getMainLooper());
-    private TextView view;
-    private Phase phase;
-    private String detail = "";
-    private long since;
-    private long lastChange;
-    private final Runnable tick = this::render;
-    private final Runnable hide = this::hideNow;
+    private final MuseBar bar;
 
-    StatusPill(Context context) { this.context = context; }
+    StatusPill(Context context) { this.bar = MuseBar.get(context); }
 
     void set(Phase p, String text) {
-        main.post(() -> {
-            if (p != phase || (text != null && !text.equals(detail))) lastChange = SystemClock.elapsedRealtime();
-            if (p != phase && !(isBusy(p) && isBusy(phase))) since = SystemClock.elapsedRealtime();
-            phase = p;
-            detail = text == null ? "" : text;
-            main.removeCallbacks(hide);
-            if (p == Phase.DONE) main.postDelayed(hide, 4000);
-            else if (p == Phase.FAILED) main.postDelayed(hide, 9000);
-            else if (p == Phase.APPROVAL) main.postDelayed(hide, 10 * 60_000L);
-            else main.postDelayed(hide, 75_000L); // no news from Muse for 75 s: don't keep claiming it is busy
-            render();
-        });
+        long hide = p == Phase.DONE ? 3000 : p == Phase.FAILED ? 8000 : p == Phase.APPROVAL ? 10 * 60_000L : 75_000L;
+        bar.setStatus(p, text, hide);
     }
 
-    private static boolean isBusy(Phase p) {
-        return p == Phase.THINKING || p == Phase.WORKING || p == Phase.RESPONDING;
-    }
-
-    void hide() { main.post(this::hideNow); }
-
-    private void render() {
-        if (phase == null || !Settings.canDrawOverlays(context)) return;
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        if (view == null) {
-            view = new TextView(context);
-            view.setTextColor(Color.WHITE);
-            view.setTextSize(15);
-            view.setPadding(26, 12, 26, 12);
-            view.setMaxWidth(1000);
-            view.setAlpha(0.85f);
-            view.setMaxLines(2);
-            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                    PixelFormat.TRANSLUCENT);
-            lp.gravity = Gravity.TOP | Gravity.START;
-            lp.x = 48; lp.y = 36;
-            try { wm.addView(view, lp); } catch (Exception e) { view = null; return; }
-        }
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xCC101216);   // quiet translucent neutral, no outline
-        bg.setCornerRadius(16);
-        view.setBackground(bg);
-        long secs = (SystemClock.elapsedRealtime() - since) / 1000;
-        String timer = (phase == Phase.WORKING || phase == Phase.THINKING) && secs >= 3 ? "  " + secs + "s" : "";
-        String line = "● " + phase.label + (detail.isEmpty() ? "" : ": " + detail) + timer;
-        view.setText(line);
-        view.setTextColor(phase == Phase.APPROVAL ? 0xFFFFD2CA : Color.WHITE);
-        main.removeCallbacks(tick);
-        if (phase == Phase.WORKING || phase == Phase.THINKING) main.postDelayed(tick, 1000);
-    }
-
-    private void hideNow() {
-        main.removeCallbacks(tick);
-        phase = null;
-        if (view == null) return;
-        try { ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).removeView(view); } catch (Exception ignored) { }
-        view = null;
-    }
+    void hide() { bar.clearStatusNow(); }
 }
