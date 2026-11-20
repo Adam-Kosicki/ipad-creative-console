@@ -8,7 +8,7 @@ sys.modules["java"] = java
 import tvgadget
 
 class Host:
-    def __init__(self): self.timers = []; self.said = []
+    def __init__(self): self.timers = []; self.said = []; self.statuses = []; self.approved = []
     def setTimer(self, at, label, kind): self.timers.append((at, label, kind)); return "abc123"
     def listTimers(self): return json.dumps([{"id": "abc123"}])
     def cancelTimer(self, i): return 1
@@ -18,6 +18,8 @@ class Host:
     def openApp(self, a): return "error: nope isn't installed" if a == "nope" else "com.netflix.ninja"
     def youtube(self, v): return "search: " + v
     def goHome(self): pass
+    def status(self, p, t): self.statuses.append((p, t))
+    def approvals(self, j): self.approved.append(json.loads(j))
 
 def test_setup_and_commands(tmp_path):
     host = Host()
@@ -63,3 +65,19 @@ def test_ask_flow(tmp_path):
     tvgadget._service = types.SimpleNamespace(_current=session)
     out = json.loads(tvgadget.ask(b"RIFFdata"))
     assert out["ok"] and out["text"] == "Done, timer set." and out["audio_files"] == []  # FAST_SPEECH: TV voice
+
+
+def test_status_and_approvals(tmp_path):
+    host = Host()
+    tvgadget.setup(None, str(tmp_path), str(tmp_path), host) if False else None
+    tvgadget._host = host
+    tvgadget._last_status = ("", "")
+    tvgadget._emit_status({"event": "agent.status", "payload": {"activity_code": "working", "activity_text": "Searching the Play Store"}})
+    tvgadget._emit_status({"event": "task.status", "payload": {"status": "completed"}})
+    assert host.statuses == [("working", "Searching the Play Store"), ("done", "")]
+    snap = {"approvals": [{"approval_id": "a1", "status": "pending", "title": "Install Spotify"},
+                          {"id": "a2", "status": "approved", "title": "old"}]}
+    tvgadget._emit_status({"event": "approvals.snapshot", "payload": snap})
+    assert host.approved[-1] == [{"id": "a1", "title": "Install Spotify", "detail": ""}]
+    tvgadget._emit_status({"event": "approvals.snapshot", "payload": {"approvals": []}})
+    assert host.approved[-1] == []

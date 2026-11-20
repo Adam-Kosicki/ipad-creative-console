@@ -34,6 +34,12 @@ final class Muse {
         try { return new JSONObject(module.callAttr("status").toString()); } catch (Exception e) { return new JSONObject(); }
     }
 
+    /** Approve or deny a pending Muse approval. Never throws. */
+    static JSONObject decide(String id, String decision) {
+        try { return new JSONObject(module.callAttr("decide", id, decision).toString()); }
+        catch (Exception e) { try { return new JSONObject().put("ok", false).put("error", String.valueOf(e.getMessage())); } catch (Exception x) { return new JSONObject(); } }
+    }
+
     static void pair() { module.callAttr("pair"); }
 
     static String importPairing(String bundle) { return module.callAttr("import_pairing", bundle).toString(); }

@@ -55,6 +55,13 @@
             android:turnScreenOn="true"
             android:launchMode="singleTop" />
 
+        <activity
+            android:name=".ApprovalActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleTop" />
+
         <service
             android:name=".AssistantService"
             android:exported="false"

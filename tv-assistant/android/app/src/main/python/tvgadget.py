@@ -321,6 +321,7 @@ async def _ask(session, wav: bytes | None, text: str) -> dict:
                 name = event.get("event")
                 if name not in ("delta.text_append",):
                     log.info("chat event %s", name)
+                _emit_status(event)
                 if name == "message.user":
                     said = _user_text(event)
                     if said and said != heard:
@@ -373,6 +374,150 @@ def _user_text(event: dict) -> str:
     return ""
 
 
+# -- Live status for the on-screen pill ----------------------------------------------------
+# Muse streams agent.status / task.status / approvals.snapshot on the chat; show them on the TV.
+
+_PHASE_BY_CODE = {
+    "thinking": "thinking", "planning": "thinking", "listening": "thinking", "processing": "thinking",
+    "researching": "working", "working": "working", "executing": "working", "generating": "working",
+    "responding": "responding", "speaking": "responding",
+}
+_last_status = ("", "")
+_approvals_seen: dict = {}
+
+
+def _short(value, limit=140) -> str:
+    text = " ".join(str(value).split())
+    return text if len(text) <= limit else text[:limit - 1] + "\u2026"
+
+
+def _approval_items(payload: dict) -> list:
+    """Pending approvals from an approvals.* event, whatever shape the list has."""
+    candidates = []
+    for key in ("approvals", "items", "pending", "data", "snapshot"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            candidates = value
+            break
+        if isinstance(value, dict):
+            for inner in ("approvals", "items", "pending"):
+                if isinstance(value.get(inner), list):
+                    candidates = value[inner]
+                    break
+    items = []
+    for raw in candidates:
+        if not isinstance(raw, dict):
+            continue
+        state = str(raw.get("status") or raw.get("state") or "pending").lower()
+        if state not in ("pending", "requested", "open", "waiting", "awaiting_approval", "awaiting"):
+            continue
+        ident = raw.get("approval_id") or raw.get("id")
+        if not ident:
+            continue
+        title = (raw.get("title") or raw.get("summary") or raw.get("description") or raw.get("action")
+                 or raw.get("tool_name") or raw.get("kind") or "Muse needs your approval")
+        detail = raw.get("detail") or raw.get("reason") or raw.get("message") or raw.get("destination") or ""
+        items.append({"id": str(ident), "title": _short(title, 120), "detail": _short(detail, 240)})
+    return items
+
+
+def _emit_status(event: dict) -> None:
+    """Turn one Muse chat event into a status-pill update on the TV. Never raises."""
+    global _last_status
+    try:
+        name = event.get("event")
+        payload = event.get("payload") or {}
+        phase = text = None
+        if name == "agent.status":
+            code = str(payload.get("activity_code") or "")
+            text = _short(payload.get("activity_text") or "")
+            if code in ("idle", "online", ""):
+                if not text:
+                    return
+            phase = _PHASE_BY_CODE.get(code, "working")
+            log.info("status agent.status code=%s text=%s", code, text)
+        elif name == "task.status":
+            status = str(payload.get("status") or "")
+            log.info("status task.status %s keys=%s", status, sorted(payload))
+            if status == "running":
+                phase, text = "working", ""
+            elif status == "completed":
+                phase, text = "done", ""
+            elif status in ("failed", "errored"):
+                phase, text = "failed", _short(payload.get("error") or payload.get("message") or "")
+            elif status in ("cancelled", "canceled"):
+                phase, text = "done", "Cancelled"
+        elif name and name.startswith("approvals."):
+            log.info("status %s payload=%s", name, _short(json.dumps(payload), 1500))
+            items = _approval_items(payload)
+            if items:
+                _approvals_seen.update({i["id"]: i for i in items})
+                _host.approvals(json.dumps(items))
+                return
+            _approvals_seen.clear()
+            _host.approvals("[]")
+            return
+        elif name in ("delta.message_start", "delta.text_append"):
+            phase, text = "responding", ""
+        if not phase:
+            return
+        if (phase, text) == _last_status and phase != "done":
+            return
+        _last_status = (phase, text)
+        _host.status(phase, text or "")
+    except Exception:
+        log.exception("could not show Muse's status")
+
+
+def decide(approval_id: str, decision: str) -> str:
+    """Approve or deny a pending Muse approval from the TV remote. Returns JSON."""
+    if _loop is None:
+        return json.dumps({"ok": False, "error": "The Muse link isn't running."})
+    session = getattr(_service, "_current", None)
+    if session is None:
+        return json.dumps({"ok": False, "error": "Not connected to Muse."})
+    future = asyncio.run_coroutine_threadsafe(_decide(session, approval_id, decision), _loop)
+    try:
+        return json.dumps(future.result(30))
+    except Exception as exc:
+        future.cancel()
+        return json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+
+
+async def _decide(session, approval_id: str, decision: str) -> dict:
+    """Try Muse's approvals endpoint through the encrypted link; log every answer for tuning."""
+    from urllib.parse import quote
+    from musegadget.link_client import Header
+    approve = decision == "approve"
+    bodies = [{"decision": "approve" if approve else "deny"},
+              {"approved": approve}, {"decision": "approved" if approve else "denied"}]
+    last = ""
+    for prefix in ("", "/api"):
+        path = f"{prefix}/approvals/{quote(approval_id, safe='')}/decide"
+        for body in bodies:
+            try:
+                async with session.stream_http(
+                        "POST", path, json.dumps(body).encode(),
+                        headers=[Header("Content-Type", "application/json")]) as stream:
+                    data = b""
+                    async for chunk in stream:
+                        data += chunk
+                        if len(data) > 4000:
+                            break
+                    last = f"{stream.status} {data[:200]!r}"
+                    log.info("decide %s %s -> %s", path, body, last)
+                    if 200 <= stream.status < 300:
+                        return {"ok": True}
+                    if stream.status in (401, 403):
+                        return {"ok": False, "error": f"Muse won't let the TV decide ({stream.status})."}
+                    if stream.status == 404:
+                        break
+            except Exception as exc:
+                last = f"{type(exc).__name__}: {exc}"
+                log.info("decide %s failed: %s", path, last)
+    return {"ok": False, "error": f"Couldn't decide it from the TV ({last})."}
+
+
 def _show_heard(text: str) -> None:
     try:
         _host.heard(text)
@@ -409,6 +554,7 @@ async def _follow_rest(turn, queue: asyncio.Queue, pump_task, spoken: set) -> No
                 log.info("chat event task.status %s (follow-up)", payload.get("status"))
             elif name not in ("delta.text_append",):
                 log.info("chat event %s (follow-up)", name)
+            _emit_status(event)
             turn.feed(event)
             for reply in list(turn.replies.values()):
                 if reply.done and reply.text.strip() and reply.message_id not in spoken:
