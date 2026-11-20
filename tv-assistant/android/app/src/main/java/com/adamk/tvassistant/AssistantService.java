@@ -60,6 +60,72 @@ public class AssistantService extends Service {
 
     private Prefs prefs;
     private Overlay overlay;
+    private StatusPill pill;
+    private volatile CountDownLatch speechLatch;
+    private volatile boolean interrupted = false;
+    static final String ACTION_STOP = "com.adamk.tvassistant.STOP";
+
+    /** Stop talking now and drop any further Muse messages queued to be spoken. */
+    void stopSpeaking() {
+        interrupted = true;
+        try { tts.stop(); } catch (Exception ignored) { }
+        CountDownLatch l = speechLatch;
+        if (l != null) l.countDown();
+        Muse.stopFollowing();
+        overlay.hide();
+        pill.hide();
+        if (state == State.SPEAKING || state == State.THINKING) state = State.IDLE;
+    }
+    static volatile org.json.JSONArray pendingApprovals = new org.json.JSONArray();
+    private static volatile String lastApprovalIds = "";
+
+    /** Status from Muse's chat stream (called from Python). */
+    static void musePhase(String phase, String text) {
+        AssistantService s = instance;
+        if (s == null || s.pill == null) return;
+        StatusPill.Phase p;
+        switch (phase) {
+            case "thinking": p = StatusPill.Phase.THINKING; break;
+            case "responding": p = StatusPill.Phase.RESPONDING; break;
+            case "done": p = StatusPill.Phase.DONE; break;
+            case "failed": p = StatusPill.Phase.FAILED; break;
+            default: p = StatusPill.Phase.WORKING;
+        }
+        if (pendingApprovals.length() > 0 && p != StatusPill.Phase.DONE && p != StatusPill.Phase.FAILED) return;
+        s.pill.set(p, text);
+    }
+
+    static void museApprovals(String json) {
+        AssistantService s = instance;
+        try {
+            org.json.JSONArray list = new org.json.JSONArray(json);
+            pendingApprovals = list;
+            if (s == null) return;
+            if (list.length() == 0) { lastApprovalIds = ""; s.pill.set(StatusPill.Phase.WORKING, ""); return; }
+            String ids = "";
+            for (int i = 0; i < list.length(); i++) ids += list.getJSONObject(i).optString("id") + ",";
+            s.pill.set(StatusPill.Phase.APPROVAL, list.getJSONObject(0).optString("title"));
+            if (!ids.equals(lastApprovalIds)) {
+                lastApprovalIds = ids;
+                s.worker.submit(() -> {
+                    s.beep(ToneGenerator.TONE_PROP_BEEP2);
+                    Intent i = new Intent(s, ApprovalActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    s.startActivity(i);
+                });
+            }
+        } catch (Exception e) { Log.w(TAG, "bad approvals payload", e); }
+    }
+
+    static void dropApproval(String id) {
+        org.json.JSONArray out = new org.json.JSONArray();
+        for (int i = 0; i < pendingApprovals.length(); i++) {
+            org.json.JSONObject o = pendingApprovals.optJSONObject(i);
+            if (o != null && !id.equals(o.optString("id"))) out.put(o);
+        }
+        pendingApprovals = out;
+        AssistantService s = instance;
+        if (s != null && out.length() == 0) { lastApprovalIds = ""; s.pill.set(StatusPill.Phase.WORKING, ""); }
+    }
     private TextToSpeech tts;
     private volatile boolean ttsReady = false;
     private Thread micThread, eventThread;
@@ -87,6 +153,7 @@ public class AssistantService extends Service {
         super.onCreate();
         prefs = new Prefs(this);
         overlay = new Overlay(this);
+        pill = new StatusPill(this);
         instance = this;
         audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         startForeground(1, notification());
@@ -122,9 +189,11 @@ public class AssistantService extends Service {
             String text = intent.getStringExtra("text");
             state = State.THINKING;
             overlay.show("Thinking…", 0);
+            pill.set(StatusPill.Phase.THINKING, "");
             worker.submit(() -> ask(null, text));
         }
         if (intent != null && ACTION_STOP_ALARM.equals(intent.getAction())) AlarmActivity.stopAll();
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) stopSpeaking();
         return START_STICKY;
     }
 
@@ -135,6 +204,7 @@ public class AssistantService extends Service {
         if (eventThread != null) eventThread.interrupt();
         worker.shutdownNow();
         overlay.hide();
+        pill.hide();
         if (tts != null) tts.shutdown();
         super.onDestroy();
     }
@@ -251,11 +321,13 @@ public class AssistantService extends Service {
                         Log.i(TAG, "no speech after wake word");
                         beep(ToneGenerator.TONE_PROP_NACK);
                         overlay.hide();
+                        pill.hide();
                         finishTurn();
                     } else if ((heardSpeech && quietMs >= END_SILENCE_MS && sinceStartMs >= MIN_REQUEST_MS) || full) {
                         Log.i(TAG, "request recorded: " + sinceStartMs + " ms");
                         state = State.THINKING;
                         overlay.show("Thinking…", 0);
+                        pill.set(StatusPill.Phase.THINKING, "");
                         final byte[] wav = Wav.fromPcm(request, requestLen);
                         worker.submit(() -> ask(wav, null));
                     }
@@ -266,8 +338,17 @@ public class AssistantService extends Service {
                         cooldownUntil = now + 1500;
                     }
                     break;
+                case SPEAKING:
+                case THINKING:
+                    // Saying "Hey Jarvis" while Muse is talking cuts it off and starts a new request.
+                    if (triggered && score >= 0.85f) {
+                        Log.i(TAG, "wake while busy: interrupting (score " + score + ")");
+                        stopSpeaking();
+                        talkRequested = true;
+                    }
+                    break;
                 default:
-                    break; // THINKING / SPEAKING: ignore the mic so the TV doesn't hear itself
+                    break;
             }
         }
         if (rec != null) { rec.stop(); rec.release(); }
@@ -309,6 +390,7 @@ public class AssistantService extends Service {
                     lastHeard = text;
                     state = State.THINKING;
                     overlay.show(text, 0);
+                    pill.set(StatusPill.Phase.THINKING, "");
                     micLent = false;
                     worker.submit(() -> ask(null, text));
                     return;
@@ -318,6 +400,7 @@ public class AssistantService extends Service {
                     lastError = "Google speech recognizer unavailable (error " + error + "); using voice notes";
                 }
                 overlay.hide();
+                pill.hide();
                 worker.submit(() -> beep(ToneGenerator.TONE_PROP_NACK));
                 finishTurn();
                 micLent = false;
@@ -326,16 +409,18 @@ public class AssistantService extends Service {
     }
 
     private void startListening() {
+        interrupted = false;
         state = State.LISTENING;
         requestFocus();
         beep(ToneGenerator.TONE_PROP_ACK);
         overlay.show("Listening…", 0);
+        pill.set(StatusPill.Phase.LISTENING, "");
     }
 
     private void finishTurn() {
         abandonFocus();
         cooldownUntil = SystemClock.elapsedRealtime() + 1500;
-        if (state != State.ALARM) state = State.IDLE;
+        if (state == State.SPEAKING || state == State.THINKING || state == State.STARTING) state = State.IDLE;
     }
 
     // -- Asking Muse through the Pi --------------------------------------------
@@ -379,7 +464,7 @@ public class AssistantService extends Service {
                 }
             }
             if (!played) speakAndWait(text);
-            overlay.show(text, 4000);
+            if (!interrupted) overlay.show(text, 4000);
         } catch (Exception e) {
             Log.e(TAG, "ask failed", e);
             lastError = (usePi ? "Can't reach the Pi: " : "Muse: ") + e.getMessage();
@@ -452,11 +537,26 @@ public class AssistantService extends Service {
         }
     }
 
+    /** First few sentences only (about 350 characters); the card still shows everything. */
+    static String spokenPart(String text) {
+        if (text == null || text.length() <= 350) return text;
+        int cut = -1;
+        for (int i = 330; i >= 120; i--) {
+            char ch = text.charAt(i);
+            if ((ch == '.' || ch == '!' || ch == '?') && i + 1 < text.length() && Character.isWhitespace(text.charAt(i + 1))) { cut = i + 1; break; }
+        }
+        return cut > 0 ? text.substring(0, cut) : text.substring(0, 350);
+    }
+
     void speakAndWait(String text) {
+        text = spokenPart(text);
         if (!ttsReady || text == null || text.isEmpty()) return;
+        if (interrupted) return;
         CountDownLatch done = new CountDownLatch(1);
+        speechLatch = done;
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) { }
+            @Override public void onStop(String id, boolean wasInterrupted) { done.countDown(); }
             @Override public void onDone(String id) { done.countDown(); }
             @Override public void onError(String id) { done.countDown(); }
         });

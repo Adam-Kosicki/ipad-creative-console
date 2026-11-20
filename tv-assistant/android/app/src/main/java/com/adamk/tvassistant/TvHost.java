@@ -53,6 +53,12 @@ public class TvHost {
 
     public void heard(String text) { AssistantService.heard(text); }
 
+    /** Muse's live status from the chat stream: thinking, working, responding, done, failed. */
+    public void status(String phase, String text) { AssistantService.musePhase(phase, text); }
+
+    /** Pending Muse approvals, as a JSON array of {id,title,detail}; empty when none. */
+    public void approvals(String json) { AssistantService.museApprovals(json); }
+
     public String volume(String action, int level) throws Exception {
         AudioManager am = context.getSystemService(AudioManager.class);
         int s = AudioManager.STREAM_MUSIC, max = am.getStreamMaxVolume(s);
