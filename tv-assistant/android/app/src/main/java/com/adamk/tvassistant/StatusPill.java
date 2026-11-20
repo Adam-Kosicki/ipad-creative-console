@@ -64,9 +64,10 @@ final class StatusPill {
         if (view == null) {
             view = new TextView(context);
             view.setTextColor(Color.WHITE);
-            view.setTextSize(20);
-            view.setPadding(36, 18, 36, 18);
-            view.setMaxWidth(1300);
+            view.setTextSize(15);
+            view.setPadding(26, 12, 26, 12);
+            view.setMaxWidth(1000);
+            view.setAlpha(0.85f);
             view.setMaxLines(2);
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
@@ -74,13 +75,12 @@ final class StatusPill {
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                     PixelFormat.TRANSLUCENT);
             lp.gravity = Gravity.TOP | Gravity.START;
-            lp.x = 60; lp.y = 50;
+            lp.x = 48; lp.y = 36;
             try { wm.addView(view, lp); } catch (Exception e) { view = null; return; }
         }
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xE6141820);
-        bg.setStroke(5, phase.color);
-        bg.setCornerRadius(60);
+        bg.setColor(0x99101216);   // quiet translucent neutral, no outline
+        bg.setCornerRadius(16);
         view.setBackground(bg);
         long secs = (SystemClock.elapsedRealtime() - since) / 1000;
         String timer = (phase == Phase.WORKING || phase == Phase.THINKING) && secs >= 3 ? "  " + secs + "s" : "";
