@@ -21,7 +21,7 @@ final class StatusPill {
     StatusPill(Context context) { this.bar = MuseBar.get(context); }
 
     void set(Phase p, String text) {
-        long hide = p == Phase.DONE ? 3000 : p == Phase.FAILED ? 8000 : p == Phase.APPROVAL ? 10 * 60_000L : 75_000L;
+        long hide = p == Phase.DONE ? 3000 : p == Phase.FAILED ? 8000 : p == Phase.APPROVAL ? 10 * 60_000L : 45_000L;
         bar.setStatus(p, text, hide);
     }
 

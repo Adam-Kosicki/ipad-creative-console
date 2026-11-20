@@ -341,7 +341,7 @@ public class AssistantService extends Service {
                 case SPEAKING:
                 case THINKING:
                     // Saying "Hey Jarvis" while Muse is talking cuts it off and starts a new request.
-                    if (triggered) {
+                    if (triggered && score >= 0.85f) {
                         Log.i(TAG, "wake while busy: interrupting (score " + score + ")");
                         stopSpeaking();
                         talkRequested = true;
@@ -537,7 +537,19 @@ public class AssistantService extends Service {
         }
     }
 
+    /** First few sentences only (about 350 characters); the card still shows everything. */
+    static String spokenPart(String text) {
+        if (text == null || text.length() <= 350) return text;
+        int cut = -1;
+        for (int i = 330; i >= 120; i--) {
+            char ch = text.charAt(i);
+            if ((ch == '.' || ch == '!' || ch == '?') && i + 1 < text.length() && Character.isWhitespace(text.charAt(i + 1))) { cut = i + 1; break; }
+        }
+        return cut > 0 ? text.substring(0, cut) : text.substring(0, 350);
+    }
+
     void speakAndWait(String text) {
+        text = spokenPart(text);
         if (!ttsReady || text == null || text.isEmpty()) return;
         if (interrupted) return;
         CountDownLatch done = new CountDownLatch(1);

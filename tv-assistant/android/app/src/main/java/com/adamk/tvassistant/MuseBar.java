@@ -74,7 +74,7 @@ final class MuseBar {
         main.post(() -> {
             if (p != phase) since = SystemClock.elapsedRealtime();
             phase = p;
-            detail = text == null ? "" : text;
+            detail = clean(text);
             main.removeCallbacks(clearStatus);
             if (hideAfterMs > 0) main.postDelayed(clearStatus, hideAfterMs);
             render();
@@ -82,6 +82,17 @@ final class MuseBar {
     }
 
     void clearStatusNow() { main.post(() -> { main.removeCallbacks(clearStatus); phase = null; detail = ""; render(); }); }
+
+    /** Drops Muse's generic filler ("is working") and tidies the step text. */
+    private static String clean(String t) {
+        if (t == null) return "";
+        t = t.trim();
+        String l = t.toLowerCase();
+        if (l.equals("is working") || l.equals("working") || l.equals("thinking") || l.equals("is thinking")
+                || l.equals("responding") || l.equals("is responding") || l.equals("processing")) return "";
+        if (l.startsWith("is ") && t.length() > 3) t = t.substring(3);
+        return t.isEmpty() ? "" : Character.toUpperCase(t.charAt(0)) + t.substring(1);
+    }
 
     private int px(float v) { return Math.round(v * dp); }
 
@@ -155,6 +166,7 @@ final class MuseBar {
         big.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         big.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         big.setMaxLines(4);
+        big.setEllipsize(android.text.TextUtils.TruncateAt.END);
         big.setLineSpacing(0, 1.12f);
         col.addView(small);
         col.addView(big);
