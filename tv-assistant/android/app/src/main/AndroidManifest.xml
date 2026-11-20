@@ -67,6 +67,10 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <receiver android:name=".StopReceiver" android:exported="true">
+            <intent-filter><action android:name="com.adamk.tvassistant.STOP" /></intent-filter>
+        </receiver>
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

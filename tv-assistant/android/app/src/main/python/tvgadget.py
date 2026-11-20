@@ -395,7 +395,7 @@ def _short(value, limit=140) -> str:
 def _approval_items(payload: dict) -> list:
     """Pending approvals from an approvals.* event, whatever shape the list has."""
     candidates = []
-    for key in ("approvals", "items", "pending", "data", "snapshot"):
+    for key in ("pending_approvals", "approvals", "items", "pending", "data", "snapshot"):
         value = payload.get(key)
         if isinstance(value, list):
             candidates = value
@@ -415,7 +415,8 @@ def _approval_items(payload: dict) -> list:
         ident = raw.get("approval_id") or raw.get("id")
         if not ident:
             continue
-        title = (raw.get("title") or raw.get("summary") or raw.get("description") or raw.get("action")
+        display = raw.get("display") if isinstance(raw.get("display"), dict) else {}
+        title = (display.get("permission_question") or display.get("title") or raw.get("title") or raw.get("summary") or raw.get("description") or raw.get("action")
                  or raw.get("tool_name") or raw.get("kind") or "Muse needs your approval")
         detail = raw.get("detail") or raw.get("reason") or raw.get("message") or raw.get("destination") or ""
         items.append({"id": str(ident), "title": _short(title, 120), "detail": _short(detail, 240)})

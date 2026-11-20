@@ -80,7 +80,7 @@ final class StatusPill {
             try { wm.addView(view, lp); } catch (Exception e) { view = null; return; }
         }
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0x99101216);   // quiet translucent neutral, no outline
+        bg.setColor(0xCC101216);   // quiet translucent neutral, no outline
         bg.setCornerRadius(16);
         view.setBackground(bg);
         long secs = (SystemClock.elapsedRealtime() - since) / 1000;
