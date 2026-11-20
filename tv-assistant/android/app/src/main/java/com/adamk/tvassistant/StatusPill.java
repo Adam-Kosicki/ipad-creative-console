@@ -47,7 +47,8 @@ final class StatusPill {
             main.removeCallbacks(hide);
             if (p == Phase.DONE) main.postDelayed(hide, 4000);
             else if (p == Phase.FAILED) main.postDelayed(hide, 9000);
-            else main.postDelayed(hide, 10 * 60_000L); // safety net if Muse never says it is done
+            else if (p == Phase.APPROVAL) main.postDelayed(hide, 10 * 60_000L);
+            else main.postDelayed(hide, 75_000L); // no news from Muse for 75 s: don't keep claiming it is busy
             render();
         });
     }

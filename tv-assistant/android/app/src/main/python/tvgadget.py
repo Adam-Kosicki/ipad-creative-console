@@ -434,6 +434,9 @@ def _emit_status(event: dict) -> None:
             text = _short(payload.get("activity_text") or "")
             if code in ("idle", "online", ""):
                 if not text:
+                    if code == "idle":
+                        _last_status = ("done", "")
+                        _host.status("done", "")
                     return
             phase = _PHASE_BY_CODE.get(code, "working")
             log.info("status agent.status code=%s text=%s", code, text)
